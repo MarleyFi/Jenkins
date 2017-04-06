@@ -1,16 +1,26 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Discord.Commands;
 
 namespace DiscordBot
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
-            Bot bot = new Bot();
+            Configuration cfg = new Configuration();
+            DiscordBotLog.Init(cfg.directoryPath);
+            try
+            {
+                Bot bot = new Bot(cfg);
+            }
+            catch (Exception ex)
+            {
+                DiscordBotLog.AppendLog(DiscordBotLog.BuildErrorMessage(ex));
+                DiscordBotLog.WriteSingleLog(DiscordBotLog.BuildErrorMessage(ex), "error.txt");
+                Bot.Client.Disconnect();
+            }
+            
         }
     }
 }

@@ -7,7 +7,7 @@ using Discord;
 
 namespace DiscordBot
 {
-    internal class Users
+    class Users
     {
         #region Users
 
@@ -19,43 +19,26 @@ namespace DiscordBot
             var admin = admins
                 .Where(r => r.Field<ulong>("USERID").Equals(userID))
                 .Where(r => r.Field<ulong>("SERVERID").Equals(serverId));
-            if (admin.Count() == 1)
-            {
-                return true;
-            }
-            Server server = Bot.Client.GetServer(serverId);
-            var user = server.Users.Where(r => r.Id.Equals(userID)).ElementAt(0);
-            var adminRole = user.Roles.Where(r => r.Name.Equals(Bot.Config.AdminRoleName));
-            return (adminRole.Count() == 1);
+            return (admin.Count() == 1);
         }
 
         public bool IsUserDev(ulong userID)
         {
             var admins = Jenkins.Database.Tables["ADMINS"].AsEnumerable();
             var dev = admins
-                .Where(r => r.Field<bool>("ISDEV").Equals(true))
-                .Where(r => r.Field<ulong>("USERID").Equals(userID)); ;
+                .Where(r => r.Field<bool>("ISDEV").Equals(true));
             return (dev.Count() >= 1);
         }
 
         public void PromoteToAdmin(ulong userId, ulong serverId)
         {
-            var admin = Jenkins.Database.Tables["ADMINS"].AsEnumerable()
-                .Where(r => r.Field<ulong>("USERID").Equals(userId))
-                .Where(r => r.Field<ulong>("SERVERID").Equals(serverId));
-            if (admin.Count() >= 1)
-                return;
             Jenkins.Database.Tables["ADMINS"].Rows.Add(userId, serverId, false);
             Jenkins.Write();
         }
 
-        public void DegradeToUser(ulong userId, ulong serverId)
+        public void DegradeToUser(ulong userId)
         {
-            var admins = Jenkins.Database.Tables["ADMINS"].AsEnumerable();
-            var admin = admins
-                .Where(r => r.Field<ulong>("USERID").Equals(userId))
-                .Where(r => r.Field<ulong>("SERVERID").Equals(serverId));
-            admin.ElementAt(0).Delete();
+            Jenkins.Database.Tables["ADMINS"].Rows.Find(userId).Delete();
             Jenkins.Write();
         }
 
@@ -76,17 +59,15 @@ namespace DiscordBot
 
         public ulong[] GetDevIDs()
         {
-            List<ulong> devList = new List<ulong>();
+            List<ulong> adminList = new List<ulong>();
             DataTable adminsTable = Jenkins.Database.Tables["ADMINS"];
             var devs = adminsTable.AsEnumerable();
             devs = devs.Where(r => r.Field<bool>("ISDEV").Equals(true));
             foreach (var dev in devs)
             {
-                ulong userId = dev.Field<ulong>("USERID");
-                if (!devList.Contains(userId))
-                    devList.Add(userId);
+                adminList.Add(dev.Field<ulong>("USERID"));
             }
-            return devList.ToArray();
+            return adminList.ToArray();
         }
 
         #endregion Admins
@@ -112,6 +93,7 @@ namespace DiscordBot
             DataRow[] userRows = Jenkins.Database.Tables["USERS"].Select(userEXP);
             return (userRows.Length == 1);
         }
+
 
         public void AddUser(User user)
         {
@@ -145,14 +127,6 @@ namespace DiscordBot
 
         #region Update stats
 
-        public void CheckUser(User user)
-        {
-            if (!IsUserRegistered(user.Id) && !user.IsBot)
-            {
-                AddUser(user);
-            }
-        }
-
         public string GetUserStats(ulong userID)
         {
             string userEXP = string.Format("ID = '{0}'", userID);
@@ -182,6 +156,7 @@ namespace DiscordBot
             row["MESSAGECOUNT"] = msgCount;
             row.AcceptChanges();
             UpdateLastActivity(user);
+
         }
 
         public void CountUpCommands(User user)

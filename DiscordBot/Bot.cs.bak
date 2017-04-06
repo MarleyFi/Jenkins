@@ -6,10 +6,14 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Cleverbot.Net;
 using Discord;
 using Discord.Audio;
 using Discord.Commands;
 using GoogleMaps.LocationServices;
+using NAudio.Wave;
+using Newtonsoft.Json.Linq;
+using YoutubeExtractor;
 
 namespace DiscordBot
 {
@@ -17,125 +21,126 @@ namespace DiscordBot
     {
         #region Internal Variables
 
-        public static Configuration Config; // Config (lol)
-        public static DiscordClient Client; // Jenkins
-
         private CommandService command;
+        private Configuration Config = new Configuration();
+        private CleverbotSession cleverBotSession;
+        private DiscordClient client;
+        private System.Timers.Timer streamCheck;
+        private bool cleverBotSessionCreated;
+        private bool playing = true;
+        private string audioPath;
+        private string mp3Path;
+        private Message mediaMessage;
+        private string mediaName;
+        private string senderName;
+        private Channel textChannel;
+        private Channel vChannelToStream;
 
         #endregion Internal Variables
 
-        #region Init
-
-        public Bot(Configuration config)
+        public Bot()
         {
-            Config = config;
-            Client = new DiscordClient();
-            Jenkins.Init(); // JenkinsDB-initialising
-            Memes.Init();
-            Spotify.Init();
-            Cleverbot.Init();
+            #region Init
 
-            Client = new DiscordClient(input => // Setting up Discord-Client
+            client = new DiscordClient();
+            Jenkins.Init(); // JenkinsDB-initialising
+
+            streamCheck = new System.Timers.Timer((Config.TwitchCheckInterval * 1000));
+            streamCheck.Elapsed += StreamCheck_Elapsed;
+            streamCheck.Start();
+            CheckForStartedStreams();
+            client = new DiscordClient(input =>
             {
                 input.LogLevel = LogSeverity.Info;
                 input.LogHandler = Log;
             });
 
-            Client.UsingCommands(input => // Setting up Command-section
+            client.UsingCommands(input =>
             {
                 input.PrefixChar = '/';
                 input.AllowMentionPrefix = true;
             });
 
-            Client.UsingAudio(x => // Setting up Audio-Client
+            client.UsingAudio(x =>
             {
                 x.Mode = AudioMode.Outgoing;
             });
 
-            command = Client.GetService<CommandService>();
+            command = client.GetService<CommandService>();
+            cleverBotSessionCreated = CreateCleverBotSession();
+            if (!cleverBotSessionCreated)
+            {
+                try
+                {
+                    cleverBotSession = CleverbotSession.NewSession(Config.CleverbotAPIUser, Config.CleverbotAPIKey);
+
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Error while setting up Cleverbot-API...\r\nExceptionMsg: " + e.Message);
+                }
+            }
 
             #endregion Init
 
             #region Events
 
-            Client.MessageReceived += async (s, e) =>
-        {
-            if (e.Message.User.IsBot)
+            client.MessageReceived += async (s, e) =>
             {
-                return;
-            }
-            Jenkins.Users.CheckUser(e.Message.User);
-            if (e.Message.Text.StartsWith("/"))
-            {
-                Jenkins.Users.CountUpCommands(e.Message.User);
-                if (Config.Debug && !Jenkins.Users.IsUserDev(e.Message.User.Id))
+                if (e.Message.User.IsBot)
                 {
-                    NotifyDevs(Supporter.BuildDebugUserMessage(e.Message.Text, e.Message.User, e.Message.Channel));
+                    return;
                 }
-                return;
-            }
-            Jenkins.Users.CountUpMessages(e.Message.User);
+                CheckUser(e.Message.User);
+                if (e.Message.Text.StartsWith("/"))
+                {
+                    Jenkins.Users.CountUpCommands(e.Message.User);
+                    if (Config.Debug && !Jenkins.Users.IsUserDev(e.Message.User.Id))
+                    {
+                        NotifyDevs(Supporter.BuildDebugUserMessage(e.Message.Text, e.Message.User, e.Message.Channel));
+                    }
+                    return;
+                }
+                Jenkins.Users.CountUpMessages(e.Message.User);
 
-            if ((e.Message.IsMentioningMe() && !Config.Muted) || e.Message.Channel.IsPrivate)
-            {
-                await e.Message.Channel.SendIsTyping();
-                string answer = Cleverbot.IsServiceAvailable ? Cleverbot.TalkWithCleverBot(Supporter.RemoveMention(e.Message.Text)) : Cleverbot.Talk(Supporter.RemoveMention(e.Message.Text));
-                await e.Channel.SendMessage(answer);
-                Jenkins.Users.CountUpTalkedToMe(e.Message.User);
-                if (Config.Debug && !Jenkins.Users.IsUserDev(e.Message.User.Id))
+
+                if ((e.Message.IsMentioningMe() && !Config.Muted) || e.Message.Channel.IsPrivate)
                 {
-                    NotifyDevs(string.Format("Answered in {0} to **{1}**\r\n**Message:** '*{2}*'\r\n**Answer:**  '*{3}*'",
-                        e.Channel.IsPrivate ? "**private Chat**" : "#**" + e.Channel.Name + "** on Server **" + e.Server.Name + "**",
-                        e.Message.User.Name,
-                        e.Message.Text,
-                        answer));
+                    await e.Message.Channel.SendIsTyping();
+                    string answer = cleverBotSessionCreated ? TalkWithCleverBot(Supporter.RemoveMention(e.Message.Text)): Talk(Supporter.RemoveMention(e.Message.Text));
+                    await e.Channel.SendMessage(answer);
+                    Jenkins.Users.CountUpTalkedToMe(e.Message.User);
                 }
-            }
-            else if (Supporter.YesOrNo(Config.RandomTalkChance) && !Config.Muted)
-            {
-                await e.Message.Channel.SendIsTyping();
-                string answer = Cleverbot.IsServiceAvailable ? Cleverbot.TalkWithCleverBot(e.Message.Text) : Cleverbot.Talk(e.Message.Text);
-                if (!(!e.Message.Channel.IsPrivate && answer == "The Cleverbot-API is currently unavailable."))
+                else if (Supporter.YesOrNo(Config.RandomTalkChance) && !Config.Muted)
                 {
+                    await e.Message.Channel.SendIsTyping();
+                    string answer = cleverBotSessionCreated ? TalkWithCleverBot(e.Message.Text) : Talk(e.Message.Text);
+                    if (!(!e.Message.Channel.IsPrivate && answer == "The Cleverbot-API is currently unavailable."))
+                    {
+                        if (Config.TTSEnabled)
+                        {
+                            await e.Channel.SendTTSMessage(answer);
+                        }
+                        else
+                        {
+                            await e.Channel.SendMessage(answer);
+                        }
+                    }
+                }
+                else if (!Config.Muted && Jenkins.Insults.IsUserVictim(e.Message.User.Id) && Supporter.YesOrNo(Config.RandomActionChance))
+                {
+                    string authorName = e.User.Name;
+                    string insult = Supporter.BuildInsult(Jenkins.Insults.GetRandomInsult(), authorName);
                     if (Config.TTSEnabled)
                     {
-                        await e.Channel.SendTTSMessage(answer);
+                        await e.Channel.SendTTSMessage(insult);
                     }
                     else
                     {
-                        await e.Channel.SendMessage(answer);
-                    }
-                    if (Config.Debug && !Jenkins.Users.IsUserDev(e.Message.User.Id))
-                    {
-                        NotifyDevs(string.Format("Answered randomly in {0} to **{1}**\r\n**Message:** '*{2}*'\r\n**Answer:**  '*{3}*'",
-                            e.Channel.IsPrivate ? "**private Chat**" : "#**" + e.Channel.Name + "** on Server **" + e.Server.Name + "**",
-                            e.Message.User.Name,
-                            e.Message.Text,
-                            answer));
+                        await e.Channel.SendMessage(insult);
                     }
                 }
-            }
-            else if (!Config.Muted && Jenkins.Insults.IsUserVictim(e.Message.User.Id) && Supporter.YesOrNo(Config.RandomActionChance))
-            {
-                string authorName = e.User.Name;
-                string insult = Supporter.BuildInsult(Jenkins.Insults.GetRandomInsult(), authorName);
-                if (Config.TTSEnabled)
-                {
-                    await e.Channel.SendTTSMessage(insult);
-                }
-                else
-                {
-                    await e.Channel.SendMessage(insult);
-                }
-            }
-            if (!e.Channel.IsPrivate)
-            {
-                if (Observe.IsServerObserved(e.Server.Id))
-                {
-                    NotifyDevs(Supporter.BuildLogMessage(e));
-                }
-            }
-        };
+            };
 
             #endregion Events
 
@@ -228,49 +233,6 @@ namespace DiscordBot
                     await e.Channel.SendMessage("Pong!");
                 });
 
-            command.CreateCommand("shortURL")
-                .Description("I'll shorten a URL for you")
-                .Parameter("url", ParameterType.Required)
-                .Alias(new string[] { "shorturl", "shortUrl", "url", "URL" })
-                .Do(async (e) =>
-                {
-                    await e.Message.Delete();
-
-                    await e.Channel.SendMessage(Google.GetShortenURL(e.Args[0].ToString()));
-                });
-
-            command.CreateCommand("memes")
-                .Description("All memes I'm holding for ya")
-                .Alias(new string[] { "shorturl", "shortUrl", "url", "URL" })
-                .Do(async (e) =>
-                {
-                    await e.Message.Delete();
-                    if (Jenkins.Users.IsUserDev(e.Message.User.Id))
-                        Memes.Init();
-                    await e.Message.User.SendMessage(Supporter.BuildList("Memes", Memes.GetMemes()));
-                });
-
-            command.CreateCommand("meme")
-                .Description("Post a certain meme")
-                .Parameter("name", ParameterType.Required)
-                .Alias(new string[] { "pic", "post", "send", "react" })
-                .Do(async (e) =>
-                {
-                    await e.Message.Delete();
-                    string meme;
-                    if (Memes.TryGetMeme(e.Args[0], out meme))
-                    {
-                        await e.Channel.SendMessage("**#" + meme + "**");
-                        await e.Channel.SendFile(Memes.GetMemePath(meme));
-                    }
-                    else
-                    {
-                        await e.Message.User.SendMessage(string.Format("The meme **{0}** does not exist :(\r\n"
-                            + Supporter.BuildList("Memes", Memes.GetMemes()),
-                            e.Args[0].ToString()));
-                    }
-                });
-
             #endregion General
 
             #region Users
@@ -314,7 +276,7 @@ namespace DiscordBot
     .Do(async (e) =>
     {
         await e.Message.Delete();
-        string adminMsg = Supporter.BuildList("Admins", Jenkins.Users.GetAdminNames(e.Message.Server.Id));
+        string adminMsg = Supporter.BuildAdminList(Jenkins.Users.GetAdminNames(e.Message.Server.Id));
         await e.Message.Channel.SendMessage(adminMsg);
     });
 
@@ -454,14 +416,7 @@ namespace DiscordBot
                 .Do(async (e) =>
                 {
                     await e.Message.Delete();
-                    if (Config.TTSEnabled)
-                    {
-                        await e.Channel.SendTTSMessage(Jenkins.Quotes.GetRandomQuote());
-                    }
-                    else
-                    {
-                        await e.Channel.SendMessage(Jenkins.Quotes.GetRandomQuote());
-                    }
+                    await e.Channel.SendMessage(Jenkins.Quotes.GetRandomQuote());
                 });
 
             command.CreateCommand("quoteOf")
@@ -474,14 +429,7 @@ namespace DiscordBot
                     string quote = Jenkins.Quotes.GetQuoteOf(e.Args[0].ToString());
                     if (quote != string.Empty || quote != null)
                     {
-                        if (Config.TTSEnabled)
-                        {
-                            await e.Channel.SendTTSMessage(quote);
-                        }
-                        else
-                        {
-                            await e.Channel.SendMessage(quote);
-                        }
+                        await e.Channel.SendMessage(quote);
                     }
                     else
                     {
@@ -515,14 +463,7 @@ namespace DiscordBot
 
                     if (quote != string.Empty || quote != null)
                     {
-                        if (Config.TTSEnabled)
-                        {
-                            await e.Channel.SendTTSMessage(quote);
-                        }
-                        else
-                        {
-                            await e.Channel.SendMessage(quote);
-                        }
+                        await e.Channel.SendMessage(quote);
                     }
                     else
                     {
@@ -562,6 +503,7 @@ namespace DiscordBot
 
             #region Twitch
 
+
             command.CreateCommand("watchChannel")
                 .Description("Adds a Twitch-Channel to the watchlist of this channel")
                             .Parameter("name", ParameterType.Required)
@@ -586,7 +528,7 @@ namespace DiscordBot
 
                     if (!Jenkins.Twitch.IsTwitchChannelRegiseredByName(e.Args[0]))
                     {
-                        Jenkins.Twitch.RegisterTwitchChannel(e.Args[0], e.Message.Channel);
+                        RegisterTwitchChannel(e.Args[0], e.Message.Channel);
                         NotifyDevs(string.Format("Twitch-Channel **{0}** was registered by **{1}** in **{2}**",
                             e.Args[0],
                             e.Message.User.Name,
@@ -655,6 +597,7 @@ namespace DiscordBot
                         ));
                 });
 
+
             #endregion Twitch
 
             #region Giphy
@@ -664,7 +607,7 @@ namespace DiscordBot
                 .Do(async (e) =>
             {
                 await e.Message.Delete();
-                Giphy.GetRandomGIF(e.Message.Channel);
+                GetRandomGIF(e.Message.Channel);
             });
 
             command.CreateCommand("tgif")
@@ -672,7 +615,7 @@ namespace DiscordBot
                 .Do(async (e) =>
             {
                 await e.Message.Delete();
-                Giphy.GetTrendingGIF(e.Message.Channel);
+                GetTrendingGIF(e.Message.Channel);
             });
 
             command.CreateCommand("gif")
@@ -681,7 +624,7 @@ namespace DiscordBot
                 .Do(async (e) =>
                 {
                     await e.Message.Delete();
-                    Giphy.GetGIF(e.Args[0], e.Message.Channel);
+                    GetGIF(e.Args[0], e.Message.Channel);
                 });
 
             #endregion Giphy
@@ -693,9 +636,10 @@ namespace DiscordBot
                 .Parameter("channel", ParameterType.Required)
                 .Do(async (e) =>
                 {
-                    if (!Jenkins.Users.IsUserDev(e.Message.User.Id))
+                    if (!Jenkins.Users.IsUserAdmin(e.Message.User.Id, e.Message.Server.Id))
+                    {
                         return;
-
+                    }
                     await e.Message.Delete();
                     Channel vChannel = null;
                     if (e.Args[0] != null)
@@ -713,8 +657,32 @@ namespace DiscordBot
 
                     if (vChannel != null)
                     {
+                        var vClient = await client.GetService<AudioService>().Join(vChannel);
+
                         string path = Path.Combine(Environment.CurrentDirectory, "files", "mp3", "pardy.mp3");
-                        Audio.StreamFileToVoiceChannel(path, vChannel);
+                        var channelCount = client.GetService<AudioService>().Config.Channels;
+                        var OutFormat = new WaveFormat(48000, 16, channelCount);
+                        using (var MP3Reader = new Mp3FileReader(path))
+                        using (var resampler = new MediaFoundationResampler(MP3Reader, OutFormat))
+                        {
+                            resampler.ResamplerQuality = 60;
+                            int blockSize = OutFormat.AverageBytesPerSecond / 50;
+                            byte[] buffer = new byte[blockSize];
+                            int byteCount;
+
+                            while ((byteCount = resampler.Read(buffer, 0, blockSize)) > 0)
+                            {
+                                if (byteCount < blockSize)
+                                {
+                                    for (int i = byteCount; i < blockSize; i++)
+                                        buffer[i] = 0;
+                                }
+                                vClient.Send(buffer, 0, blockSize);
+                            }
+                        }
+                        //streamFile(vClient, newKids);
+
+                        //await client.GetService<AudioService>().Leave(vChannel);
                     }
                 }
              );
@@ -723,16 +691,17 @@ namespace DiscordBot
                 .Description("Maaskantje joooonge!")
                 .Do(async (e) =>
                 {
-                    if (!Jenkins.Users.IsUserDev(e.Message.User.Id))
+                    if (!Jenkins.Users.IsUserAdmin(e.Message.User.Id, e.Message.Server.Id))
+                    {
                         return;
-
+                    }
                     await e.Message.Delete();
                     Channel vChannel = e.User.VoiceChannel;
 
                     if (vChannel != null)
                     {
                         string path = Path.Combine(Environment.CurrentDirectory, "files", "mp3", "pardy.mp3");
-                        Audio.StreamFileToVoiceChannel(path, vChannel);
+                        StreamFileToVoiceChannel(path, vChannel);
                     }
                 }
              );
@@ -741,16 +710,17 @@ namespace DiscordBot
                 .Description("At your own risk")
                 .Do(async (e) =>
                 {
-                    if (!Jenkins.Users.IsUserDev(e.Message.User.Id))
+                    if (!Jenkins.Users.IsUserAdmin(e.Message.User.Id, e.Message.Server.Id))
+                    {
                         return;
-
+                    }
                     await e.Message.Delete();
                     Channel vChannel = e.User.VoiceChannel;
 
                     if (vChannel != null)
                     {
                         string path = Path.Combine(Environment.CurrentDirectory, "files", "mp3", "lul.mp3");
-                        Audio.StreamFileToVoiceChannel(path, vChannel);
+                        StreamFileToVoiceChannel(path, vChannel);
                     }
                 }
         );
@@ -760,16 +730,18 @@ namespace DiscordBot
                 .Parameter("url", ParameterType.Required)
                 .Do(async (e) =>
                 {
-                    if (!Jenkins.Users.IsUserDev(e.Message.User.Id))
+                    if (!Jenkins.Users.IsUserAdmin(e.Message.User.Id, e.Message.Server.Id))
+                    {
                         return;
-
+                    }
                     await e.Message.Delete();
                     Channel vChannel = e.User.VoiceChannel;
                     if (vChannel != null)
                     {
-                        var botMsg = await e.Message.Channel.SendMessage("Checking URL...");
-                        Channel vChannelToStream = vChannel;
-                        Audio.DownloadAndPlayURL(e.Args[0], botMsg, e.Message.User, vChannel);
+                        senderName = e.Message.User.Name;
+                        textChannel = e.Message.Channel;
+                        vChannelToStream = vChannel;
+                        DownloadAudio(e.Args[0]);
                     }
                     else
                     {
@@ -782,48 +754,18 @@ namespace DiscordBot
                 .Description("Stops the playing audio")
                 .Do(async (e) =>
                 {
-                    if (!Jenkins.Users.IsUserDev(e.Message.User.Id))
+                    if (!Jenkins.Users.IsUserAdmin(e.Message.User.Id, e.Message.Server.Id))
+                    {
                         return;
-
+                    }
                     await e.Message.Delete();
-                    Audio.IsPlaying = false;
+                    playing = false;
+                    Thread.Sleep(500);
+                    playing = true;
                 }
                     );
 
             #endregion VoiceCommands
-
-            #region Spotify
-
-            command.CreateCommand("playSong")
-               .Description("Plays a Song on Spotify")
-               .Parameter("name", ParameterType.Required)
-                .Alias(new string[] { "ps", "playsong" })
-               .Do(async (e) =>
-               {
-                   if (!Config.SpotifyEnabled)
-                   {
-                       return;
-                   }
-                   await e.Message.Delete();
-                   var track = Spotify.GetTrack(e.Args[0]);
-                   await e.Channel.SendMessage(track.Artists + " " + track.Name);
-               });
-
-            command.CreateCommand("playList")
-               .Description("Plays a Playlist on Spotify")
-               .Parameter("name", ParameterType.Required)
-                .Alias(new string[] { "pl", "playlist", "playPlaylist", "playplaylist" })
-               .Do(async (e) =>
-               {
-                   if (!Config.SpotifyEnabled)
-                   {
-                       return;
-                   }
-                   await e.Message.Delete();
-                   var playlist = Spotify.GetPlaylist(e.Args[0]);
-               });
-
-            #endregion Spotify
 
             #region Administration
 
@@ -831,7 +773,7 @@ namespace DiscordBot
                 .Alias(new string[] { "allChannels", "allchannels", "globalchannels" })
                 .Do(async (e) =>
                 {
-                    if (e.Message.Channel.IsPrivate || !Jenkins.Users.IsUserDev(e.Message.User.Id))
+                    if (e.Message.Channel.IsPrivate || !Jenkins.Users.IsUserAdmin(e.Message.User.Id, e.Message.Server.Id))
                     {
                         return;
                     }
@@ -847,7 +789,7 @@ namespace DiscordBot
                         ulong[] discordChannelIds = Jenkins.Twitch.GetFollowingDiscordChannelsForTwitchChannel(twitchChannel);
                         foreach (var discordChannel in discordChannelIds)
                         {
-                            var channel = Client.GetChannel(discordChannel);
+                            var channel = client.GetChannel(discordChannel);
                             sb.AppendLine("|-> **#" + channel.Name + "** on server **" + channel.Server.Name + "**");
                         }
                         sb.AppendLine();
@@ -861,10 +803,24 @@ namespace DiscordBot
                 .Do(async (e) =>
                 {
                     if (!Jenkins.Users.IsUserDev(e.Message.User.Id))
+                    {
                         return;
-
+                    }
                     await e.Message.Delete();
                     await e.Channel.SendMessage(Config.GetConfiguration(!e.Message.Channel.IsPrivate));
+                });
+
+            command.CreateCommand("reinitializeDatabase")
+                .Description("Re-reads the whole fking database")
+                .Alias(new string[] { "reread" })
+                .Do(async (e) =>
+                {
+                    if (!Jenkins.Users.IsUserAdmin(e.Message.User.Id, e.Message.Server.Id)&& false) // ToDo: Datenbank wird verdoppelt
+                    {
+                        return;
+                    }
+                    await e.Message.Delete();
+                    Jenkins.Read();
                 });
 
             command.CreateCommand("loadConfig")
@@ -872,9 +828,10 @@ namespace DiscordBot
                 .Alias(new string[] { "loadconfig", "reloadconfig", "reloadConfig" })
                 .Do(async (e) =>
                 {
-                    if (!Jenkins.Users.IsUserDev(e.Message.User.Id))
+                    if (!Jenkins.Users.IsUserAdmin(e.Message.User.Id, e.Message.Server.Id))
+                    {
                         return;
-
+                    }
                     await e.Message.Delete();
                     Config.LoadConfig();
                 });
@@ -952,68 +909,50 @@ namespace DiscordBot
                         return;
                     }
                     await e.Message.Delete();
-                    int count = int.Parse(e.Args[0]) + 1;
-                    if (count > Config.NukeLimit)
+                    int count = int.Parse(e.Args[0]);
+                    if (count > 50)
                     {
-                        count = Config.NukeLimit;
+                        count = 50;
                     }
                     var messages = await e.Message.Channel.DownloadMessages(count);
                     await e.Message.Channel.DeleteMessages(messages);
                 });
 
-            command.CreateCommand("nukeUser")
-                .Description("Deleting the users messages")
-                .Parameter("user", ParameterType.Required)
-                .Parameter("count", ParameterType.Optional)
-                .Do(async (e) =>
-                {
-                    if (!Jenkins.Users.IsUserAdmin(e.Message.User.Id, e.Message.Server.Id))
-                    {
-                        return;
-                    }
-                    await e.Message.Delete();
-                    int count = 25;
-                    if (e.Args[1] != "")
-                    {
-                        count = int.Parse(e.Args[1]) + 1;
-                    }
-
-                    if (count > Config.NukeLimit)
-                    {
-                        count = Config.NukeLimit;
-                    }
-                    var users = e.Message.Server.Users.Where(r => r.Name.Equals(e.Args[0]));
-                    var user = users.First();
-                    if (user == null)
-                    {
-                        await e.Message.User.SendMessage("Theres no user called " + e.Args[0] + " on this server :(");
-                        return;
-                    }
-                    var messages = await e.Message.Channel.DownloadMessages(count);
-                    List<Message> userMessages = new List<Message>();
-                    foreach (var message in messages)
-                    {
-                        if (message.User.Id == user.Id)
-                            userMessages.Add(message);
-                    }
-                    await e.Message.Channel.DeleteMessages(userMessages.ToArray());
-                });
+            //command.CreateCommand("nukeUser")
+            //    .Description("Deleting the users messages")
+            //    .Parameter("count", ParameterType.Required)
+            //    .Do(async (e) =>
+            //    {
+            //        if (!Jenkins.Users.IsUserAdmin(e.Message.User.Id, e.Message.Server.Id))
+            //        {
+            //            return;
+            //        }
+            //        await e.Message.Delete();
+            //        int count = int.Parse(e.Args[0]);
+            //        if (count > 15)
+            //        {
+            //            count = 15;
+            //        }
+            //        var messages = await e.Message.Channel.DownloadMessages(count);
+            //        await e.Message.Channel.DeleteMessages(messages);
+            //    });
 
             command.CreateCommand("promote")
                 .Description("Promotes a normal user to a super-sonic Admin!")
                 .Parameter("name", ParameterType.Required)
                 .Do(async (e) =>
                 {
-                    if (!Jenkins.Users.IsUserDev(e.Message.User.Id))
+                    if (!Jenkins.Users.IsUserAdmin(e.Message.User.Id, e.Message.Server.Id) && !(e.Message.User.Id == Config.OwnerID))
+                    {
                         return;
-
+                    }
                     await e.Message.Delete();
-                    ulong userId = 0;
+                    ulong userId;
                     if (Jenkins.Users.GetIDofUser(e.Args[0].ToString(), out userId))
                     {
                         Jenkins.Users.PromoteToAdmin(userId, e.Message.Server.Id);
                     }
-                    else /*if(userId == 0)*/
+                    else
                     {
                         await e.Message.Channel.SendMessage(string.Format("I don't know {0} :("
                             , e.Args[0].ToString()));
@@ -1025,40 +964,20 @@ namespace DiscordBot
                 .Parameter("name", ParameterType.Required)
                 .Do(async (e) =>
                 {
-                    if (!Jenkins.Users.IsUserDev(e.Message.User.Id))
+                    if (!Jenkins.Users.IsUserAdmin(e.Message.User.Id, e.Message.Server.Id))
+                    {
                         return;
-
+                    }
                     await e.Message.Delete();
                     ulong userId;
                     if (Jenkins.Users.GetIDofUser(e.Args[0].ToString(), out userId))
                     {
-                        Jenkins.Users.DegradeToUser(userId, e.Server.Id);
+                        Jenkins.Users.DegradeToUser(userId);
                     }
                     else
                     {
                         await e.Message.Channel.SendMessage(string.Format("I don't know {0} :("
                             , e.Args[0].ToString()));
-                    }
-                });
-
-            command.CreateCommand("setGame")
-                .Description("Configure my current Game")
-                .Hide()
-                .Parameter("name", ParameterType.Optional)
-                .Do(async (e) =>
-                {
-                    if (!Jenkins.Users.IsUserDev(e.Message.User.Id))
-                        return;
-
-                    await e.Message.Delete();
-                    if (e.Args[0].ToString() != string.Empty)
-                    {
-                        Game gm = new Game(e.Args[0], GameType.Default, "http://z0r.de/342");
-                        Client.SetGame(gm);
-                    }
-                    else
-                    {
-                        Client.SetGame(null);
                     }
                 });
 
@@ -1072,447 +991,70 @@ namespace DiscordBot
                     NotifyDevs(e.Args[0]);
                 });
 
-            command.CreateCommand("backup")
-                .Description("Provides information about the backup preferences")
-                .Do(async (e) =>
-                {
-                    if (!Jenkins.Users.IsUserDev(e.Message.User.Id))
-                        return;
-
-                    await e.Message.Delete();
-                    await e.Message.Channel.SendMessage(Jenkins.CheckAndScheduleBackUp());
-                });
-
             command.CreateCommand("shutdown")
                 .Description("Bye bye.")
                 .Do(async (e) =>
                 {
                     if (Jenkins.Users.IsUserDev(e.Message.User.Id))
                     {
-                        Jenkins.Write();
                         await e.Message.Delete();
                         await e.Channel.SendMessage("Shutting down...");
                         Thread.Sleep(1000);
-                        await Client.Disconnect();
+                        await client.Disconnect();
                         Environment.Exit(0);
                     }
                 });
 
             #endregion Administration
 
-            #region Food
-
-            command.CreateCommand("foodHelp")
-                            .Description("FOOD")
-                            .Hide()
-                            .Alias(new string[] { "foodhelp", "helpFood", "helpfood", "votehelp", "voteHelp" })
-                            .Do(async (e) =>
-                            {
-                                await e.Message.Delete();
-                                StringBuilder sb = new StringBuilder();
-                                sb.AppendLine("< - - - **Food-Help** - - - >");
-                                sb.AppendLine();
-                                sb.AppendLine("-> /**foodHelp**");
-                                sb.AppendLine("-> /**food** - Alle möglichkeiten für diesen Tag");
-                                sb.AppendLine("-> /**food <Tag>** - Alle möglichkeiten für den gewählten Tag. Bspw: '**/food Monday**'");
-                                sb.AppendLine("-> /**foodAll** - Alle möglichkeiten die **Tagesunabhängig** sind Bspw: McDonalds oder KFC");
-                                sb.AppendLine("-> /**getFood <KRZ>** - Eine spezifische möglichkeit ausgeben");
-                                sb.AppendLine("-> /**getFoodAll** - ALLE möglichkeiten ausgeben");
-                                sb.AppendLine("-> /**addFood <KRZ> <NAME> <DESC> <DAYS> <INFO>** - Fügt eine möglichkeit hinzu. Beispiel:\r\n"
-                                    + "*/addFood krz:'KFC' name:'Kentucky Fried Chicken' desc:'KFC in Gießen' days:'AllDays' info:'Tel: 01805 4646'*");
-                                sb.AppendLine("< - - - **Vote-Help** - - - >");
-                                sb.AppendLine();
-                                sb.AppendLine("-> /**vote <KRZ>** - Für etwas abstimmen bswp: /vote RL für *Real in Gießen*");
-                                sb.AppendLine("-> /**votes** - Übersicht der bereits abgegebenen stimmen");
-                                await e.Channel.SendMessage(sb.ToString());
-                            });
-
-            command.CreateCommand("foodBlock")
-                            .Description("FOOD")
-                            .Hide()
-                            .Alias(new string[] { "foodb", "foodblock" })
-                            .Parameter("day", ParameterType.Optional)
-                            .Do(async (e) =>
-                            {
-                                await e.Message.Delete();
-                                var answers = Food.GetFoodOptionsSeparately(false, e.Args[0]);
-                                if (answers.Length == 0)
-                                {
-                                    answers = Food.GetFoodOptionsSeparately(true, e.Args[0]);
-                                }
-                                foreach (var foodOption in answers)
-                                {
-                                    await e.Channel.SendMessage(foodOption);
-                                }
-                            });
-
-            command.CreateCommand("food")
-                            .Description("FOOD")
-                            .Hide()
-                            .Alias(new string[] { "imhungry" })
-                            .Parameter("day", ParameterType.Optional)
-                            .Do(async (e) =>
-                            {
-                                await e.Message.Delete();
-                                string answer = Food.GetFoodOptions(false, e.Args[0]);
-                                if (answer == "")
-                                {
-                                    answer = Food.GetFoodOptions(true, e.Args[0]);
-                                }
-                                if (answer.Length > 2000)
-                                {
-                                    var answers = Food.GetFoodOptionsSeparately(false, e.Args[0]);
-                                    if (answers.Length == 0)
-                                    {
-                                        answers = Food.GetFoodOptionsSeparately(true, e.Args[0]);
-                                    }
-                                    foreach (var foodOption in answers)
-                                    {
-                                        await e.Channel.SendMessage(foodOption);
-                                    }
-                                    return;
-                                }
-                                await e.Channel.SendMessage(answer);
-                            });
-
-            command.CreateCommand("foodAll")
-                            .Description("FOOD")
-                            .Hide()
-                            .Alias(new string[] { "fooda", "allfood", "allFood", "foodall" })
-                            .Parameter("day", ParameterType.Optional)
-                            .Do(async (e) =>
-                            {
-                                await e.Message.Delete();
-                                string answer = Food.GetFoodOptions(true, e.Args[0]);
-                                if (answer.Length > 2000)
-                                {
-                                    var answers = Food.GetFoodOptionsSeparately(true, e.Args[0]);
-                                    foreach (var foodOption in answers)
-                                    {
-                                        await e.Channel.SendMessage(foodOption);
-                                    }
-                                    return;
-                                }
-                                await e.Channel.SendMessage(answer);
-                            });
-
-            command.CreateCommand("foodAllb")
-                            .Description("FOOD")
-                            .Hide()
-                            .Alias(new string[] { "foodb", "allfoodb", "allFoodb", "foodallb" })
-                            .Parameter("day", ParameterType.Optional)
-                            .Do(async (e) =>
-                            {
-                                await e.Message.Delete();
-
-                                var answers = Food.GetFoodOptionsSeparately(true, e.Args[0]);
-                                foreach (var foodOption in answers)
-                                {
-                                    await e.Channel.SendMessage(foodOption);
-                                }
-                            });
-
-            command.CreateCommand("addFoodOption")
-                            .Description("MORE FOOD")
-                            .Hide()
-                            .Alias(new string[] { "addFoodOption", "addfood", "addfoodoption", "addFoodoption", "addfoodOption" })
-                            .Parameter("krz", ParameterType.Required)
-                            .Parameter("name", ParameterType.Required)
-                            .Parameter("desc", ParameterType.Optional)
-                            .Parameter("days", ParameterType.Optional)
-                            .Parameter("info", ParameterType.Optional)
-                            .Do(async (e) =>
-                            {
-                                await e.Message.Delete();
-                                string krz = e.GetArg("krz");
-                                string name = e.GetArg("name");
-                                string desc = e.GetArg("desc");
-                                string days = e.GetArg("days");
-                                string info = e.GetArg("info");
-                                string[] daysArray = days.Trim(' ').Split(',');
-                                List<Food.Day> dayList = new List<Food.Day>();
-                                foreach (var dayString in daysArray)
-                                {
-                                    Food.Day dayEnum;
-                                    string day = dayString.Trim(' ');
-                                    if (Enum.TryParse(day, true, out dayEnum))
-                                    {
-                                        dayList.Add(dayEnum);
-                                    }
-                                }
-                                Food.AddFoodOption(krz, name, desc, dayList.AsEnumerable(), info);
-
-                                await e.Channel.SendMessage("**" + e.Args[0] + "** was added.");
-                            });
-
-            command.CreateCommand("getFoodOption")
-                            .Description("FOOD")
-                            .Hide()
-                            .Alias(new string[] { "foodOption", "foodoption", "getFood", "getfood" })
-                            .Parameter("krz", ParameterType.Required)
-                            .Do(async (e) =>
-                            {
-                                await e.Message.Delete();
-                                await e.Channel.SendMessage(Food.GetFoodOption(e.Args[0]));
-                            });
-
-            command.CreateCommand("getFoodOptions")
-                            .Description("FOOD")
-                            .Hide()
-                            .Alias(new string[] { "foodOptions", "foodoptions", "getFoodAll", "getfoodall" })
-                            .Do(async (e) =>
-                            {
-                                await e.Message.Delete();
-                                var messagesToSend = Supporter.SplitMessage(Food.GetFoodOptions());
-                                foreach (var msg in messagesToSend)
-                                {
-                                    await e.Channel.SendMessage(msg);
-                                }
-                            });
-
-            command.CreateCommand("startVote")
-                            .Description("FOOD")
-                            .Hide()
-                            .Alias(new string[] { "startvote" })
-                            .Parameter("time", ParameterType.Optional)
-                            .Do(async (e) =>
-                            {
-                                if (!Jenkins.Users.IsUserDev(e.User.Id))
-                                {
-                                    return;
-                                }
-                                await e.Message.Delete();
-                                if (Supporter.ValidateTime(e.Args[0]))
-                                    Food.StartVote(Supporter.GetParsedDateTime(e.Args[0]), e.Channel);
-                            });
-
-            command.CreateCommand("nextVote")
-                            .Description("FOOD")
-                            .Hide()
-                            .Alias(new string[] { "nextvote" })
-                            .Do(async (e) =>
-                            {
-                                if (!Jenkins.Users.IsUserDev(e.User.Id))
-                                {
-                                    return;
-                                }
-                                await e.Message.Delete();
-                                string msg = "Next vote will start at **" + Food.NextVoteStart.ToLongDateString() + " " + Food.NextVoteStart.ToShortTimeString() + "**";
-
-                                Channel voteChannel = Client.GetChannel(Config.DailyVoteChannel);
-                                if (voteChannel != null)
-                                {
-                                    msg = msg + " in Channel **#" + voteChannel.Name + "** on Server **" + voteChannel.Server.Name + "**";
-                                }
-                                await e.Channel.SendMessage(msg);
-                            });
-
-            command.CreateCommand("vote")
-                            .Description("FOOD")
-                            .Hide()
-                            .Alias(new string[] { "voteFood", "votefood" })
-                            .Parameter("krz", ParameterType.Optional)
-                            .Do(async (e) =>
-                            {
-                                if (!Food.IsVoteRunning)
-                                {
-                                    await e.Channel.SendMessage("Für was willst du abstimmen, " + e.Message.User.Mention + " ?");
-                                    return;
-                                }
-                                if (Food.IsValidKRZ(e.Args[0]))
-                                {
-                                    await e.Message.Delete();
-                                    if (!Food.IsValidDayForKRZ(e.Args[0]))
-                                    {
-                                        await e.Channel.SendMessage(string.Format("**{0}** [**{1}**] ist heute nicht verfügbar, {2}",
-                                            Food.GetFoodName(e.Args[0]),
-                                            e.Args[0].ToUpper(),
-                                            e.Message.User.Mention));
-                                        return;
-                                    }
-                                    string foodName;
-                                    int count = Food.Vote(e.Args[0], e.Message.User.Id, out foodName);
-                                }
-                                else
-                                {
-                                    await e.Channel.SendMessage("**" + e.Args[0] + "** " + "ist kein valides Kürzel, " + e.Message.User.Mention + "\r\nProbiere es mit /**foodAll**");
-                                }
-                            });
-
-            command.CreateCommand("votes")
-                            .Description("FOOD")
-                            .Hide()
-                            .Alias(new string[] { "voteFood", "votefood" })
-                            .Do(async (e) =>
-                            {
-                                if (!Food.IsVoteRunning)
-                                {
-                                    return;
-                                }
-                                await e.Message.Delete();
-                                await e.Channel.SendMessage(Food.GetVotes());
-                            });
-
-            command.CreateCommand("delFoodOption")
-                            .Description("FOOD")
-                            .Hide()
-                            .Alias(new string[] { "delfoodOption", "delfoodoption" })
-                            .Parameter("krz", ParameterType.Required)
-                            .Do(async (e) =>
-                            {
-                                if (!Jenkins.Users.IsUserDev(e.Message.User.Id))
-                                {
-                                    return;
-                                }
-                                await e.Message.Delete();
-                                Food.DelFoodOption(e.Args[0]);
-                                await e.Channel.SendMessage("**" + e.Args[0] + "** was delted");
-                            });
-
-            command.CreateCommand("schnaut")
-                            .Description("FOOD")
-                            .Hide()
-                            .Do(async (e) =>
-                            {
-                                if (!Jenkins.Users.IsUserDev(e.Message.User.Id))
-                                {
-                                    return;
-                                }
-                                await e.Message.Delete();
-                                Food.UpdateSchnaut("http://geiooo.net/schnaut", "http://geiooo.net/schnaut/read.php");
-                            });
-
-            #endregion Food
-
-            #region Observe
-
-            command.CreateCommand("observeHelp")
-                            .Description("Observe")
-                            .Hide()
-                            .Alias(new string[] { "oh", "observehelp" })
-                            .Do(async (e) =>
-                            {
-                                if (!Jenkins.Users.IsUserDev(e.User.Id))
-                                {
-                                    return;
-                                }
-                                await e.Message.Delete();
-                                StringBuilder sb = new StringBuilder();
-                                sb.AppendLine("< - - - **Observe-Help**:spy: - - - >");
-                                sb.AppendLine();
-                                sb.AppendLine("-> /**watchServer <Name>** [**ws**]");
-                                sb.AppendLine("-> /**unwatchServer <Name>** [**us**]");
-                                sb.AppendLine("-> /**allServers** [**servers**] [**as**]");
-                                sb.AppendLine("-> /**observingServers** [**os**]");
-                                await e.Channel.SendMessage(sb.ToString());
-                            });
-
-            command.CreateCommand("watchServer")
-                            .Description("Observe")
-                            .Hide()
-                            .Alias(new string[] { "watchserver", "ws" })
-                            .Parameter("name", ParameterType.Required)
-                            .Do(async (e) =>
-                            {
-                                if (!Jenkins.Users.IsUserDev(e.User.Id))
-                                {
-                                    return;
-                                }
-                                await e.Message.Delete();
-                                Observe.AddServer(e.Args[0]);
-                            });
-
-            command.CreateCommand("unwatchServer")
-                            .Description("Observe")
-                            .Hide()
-                            .Alias(new string[] { "unwatchserver", "us" })
-                            .Parameter("name", ParameterType.Required)
-                            .Do(async (e) =>
-                            {
-                                if (!Jenkins.Users.IsUserDev(e.User.Id))
-                                {
-                                    return;
-                                }
-                                await e.Message.Delete();
-                                Observe.DelServer(e.Args[0]);
-                            });
-
-            command.CreateCommand("allServers")
-                            .Description("Observe")
-                            .Hide()
-                            .Alias(new string[] { "servers", "as" })
-                            .Do(async (e) =>
-                            {
-                                if (!Jenkins.Users.IsUserDev(e.User.Id))
-                                {
-                                    return;
-                                }
-                                await e.Message.Delete();
-                                await e.Channel.SendMessage(Supporter.BuildList("All servers", Observe.GetAllServerNames()));
-                            });
-
-            command.CreateCommand("observingServers")
-                            .Description("Observe")
-                            .Hide()
-                            .Alias(new string[] { "observingservers", "os" })
-                            .Do(async (e) =>
-                            {
-                                if (!Jenkins.Users.IsUserDev(e.User.Id))
-                                {
-                                    return;
-                                }
-                                await e.Message.Delete();
-                                await e.Channel.SendMessage(Supporter.BuildList("All observing servers", Observe.GetAllObservingServerNames()));
-                            });
-
-            #endregion Observe
+            #region DefaultCommands
 
 
 
-            #region Test
-
-            command.CreateCommand("throwException")
-                .Description("Guess it")
-                .Hide()
-                .Do(async (e) =>
-                {
-                    if (!Jenkins.Users.IsUserDev(e.Message.User.Id))
-                    {
-                        return;
-                    }
-                    int[] numberz = { 1, 2, 3 };
-                    await e.Channel.SendMessage(numberz[3].ToString());
-                });
-
-            #endregion Test
+            #endregion DefaultCommands
 
             #endregion Commands
 
-            #region Runtime
+            #region Essentials
 
-            Client.ExecuteAndWait(async () =>
+            client.ExecuteAndWait(async () =>
     {
         while (true)
         {
-            await Client.Connect(Config.DiscordToken, TokenType.Bot);
+            await client.Connect(Config.DiscordToken, TokenType.Bot);
             Console.WriteLine("Jenkins successfully connected...");
             break;
         }
     });
 
-            #endregion Runtime
+            #endregion Essentials
         }
 
         #region Methods
 
-        public static async void NotifyDevs(string text)
+        private string Talk(string msg)
+        {
+            try
+            {
+                var msgTask = cleverBotSession.SendAsync(msg);
+                msgTask.Wait();
+                return msgTask.Result;
+            }
+            catch (Exception e)
+            {
+                NotifyDevs(BuildExceptionMessage(e, "Talk()", msg));
+                return "The Cleverbot-API is currently unavailable.";
+            }
+        }
+
+        private async void NotifyDevs(string text)
         {
             var adminArray = Jenkins.Users.GetDevIDs();
             foreach (var adminID in adminArray)
             {
                 try
                 {
-                    var adminChannel = Client.CreatePrivateChannel(adminID);
+                    var adminChannel = client.CreatePrivateChannel(adminID);
                     adminChannel.Wait();
                     await adminChannel.Result.SendMessage(text);
                 }
@@ -1523,9 +1065,131 @@ namespace DiscordBot
             }
         }
 
-        public static async void SendMessage(string text, Channel channel)
+        private async void SendMessage(string text, Channel channel)
         {
             await channel.SendMessage(text);
+        }
+
+        private string BuildExceptionMessage(Exception e, string whileFunction = "", object parameter = null)
+        {
+            StringBuilder sb = new StringBuilder("Exception thrown");
+            if (whileFunction != string.Empty)
+                sb.Append(" while **" + whileFunction + "**\r\n");
+
+            sb.AppendLine("Exception: " + e.Message);
+
+            if (e.InnerException != null)
+                sb.AppendLine("InnerException: " + e.InnerException.Message);
+
+            if (parameter != null)
+            {
+                sb.Append("Function-Parameter: ");
+                sb.AppendLine(parameter.ToString());
+                sb.AppendLine("Typeof: " + parameter.GetType().ToString());
+            }
+
+            sb.AppendLine("Occurrence time: " + DateTime.Now.ToLongTimeString());
+
+            return sb.ToString();
+        }
+
+        private void RegisterTwitchChannel(string name, Channel channel = null)
+        {
+            using (var client = new HttpClient())
+            {
+                string request = string.Format("https://api.twitch.tv/kraken/channels/{0}?client_id={1}"
+                   , name
+                   , Config.TwitchAPIKey);
+                try
+                {
+                    var response = client.GetStringAsync(request);
+                    response.Wait();
+                    var channelObject = JObject.Parse(response.Result);
+                    Jenkins.Twitch.AddTwitchChannel(channelObject);
+                }
+                catch (Exception e)
+                {
+                    NotifyDevs(BuildExceptionMessage(e, "RegisterTwitchChannel()", request));
+                    if (channel != null)
+                        SendMessage("There's no Twitch-Channel called **" + name + "** :(", channel);
+                }
+            }
+        }
+
+        private void CheckForStartedStreams()
+        {
+            string[] twitchChannels = Jenkins.Twitch.GetGlobalObservingTwitchChannels();
+
+            Dictionary<ulong, string> broadcastList = new Dictionary<ulong, string>();
+            foreach (var twitchChannel in twitchChannels)
+            {
+                string request = "";
+                ulong[] discordChannelsToBroadcast = Jenkins.Twitch.GetFollowingDiscordChannelsForTwitchChannel(twitchChannel);
+
+                if (discordChannelsToBroadcast.Length == 0 && false) // ToDo Exception #1
+                {
+                    NotifyDevs("Incontinence in database for Twitch-Channel **" + twitchChannel + "**");
+                    return;
+                }
+
+                request = string.Format("https://api.twitch.tv/kraken/streams/{0}?client_id={1}"
+               , twitchChannel
+               , Config.TwitchAPIKey);
+                try
+                {
+                    using (var client = new HttpClient())
+                    {
+                        var response = client.GetStringAsync(request);
+                        response.Wait();
+                        var requestObject = JObject.Parse(response.Result);
+                        var streamString = requestObject.GetValue("stream").ToString();
+                        if ((streamString != null && streamString != string.Empty))
+                        {
+                            var streamObject = JObject.Parse(streamString);
+                            ulong streamId = ulong.Parse(streamObject.GetValue("_id").ToString());
+                            if (Jenkins.Twitch.IsStreamNotPosted(streamId))
+                            {
+                                var channelString = streamObject.GetValue("channel").ToString();
+                                var channelObject = JObject.Parse(channelString);
+                                Jenkins.Twitch.AddStream(streamObject, channelObject);
+                                string broadcast = Supporter.BuildStreamBroadcast(Jenkins.Twitch.GetStream(streamId));
+                                foreach (var discordChannel in discordChannelsToBroadcast)
+                                {
+                                    broadcastList.Add(discordChannel, broadcast);
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    NotifyDevs(BuildExceptionMessage(e, "CheckForStartedStreams()", request));
+                }
+            }
+            BroadcastStreamUpdates(broadcastList);
+        }
+
+        private void StreamCheck_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            CheckForStartedStreams();
+        }
+
+        private async void BroadcastStreamUpdates(Dictionary<ulong, string> broadcasts)
+        {
+            foreach (var broadcast in broadcasts)
+            {
+                try
+                {
+                    Channel channelToPost = client.GetChannel(broadcast.Key);
+                    await channelToPost.SendMessage(broadcast.Value);
+                }
+                catch (Exception e)
+                {
+                    NotifyDevs(BuildExceptionMessage(e, "BroadcastStreamUpdates\r\nInconsistence for parametred channelId", new object[] { broadcast.Key }));
+                }
+
+
+            }
         }
 
         private async Task<string> GetWeather(User user, Message msg)
@@ -1556,9 +1220,93 @@ namespace DiscordBot
                 {
                     // ToDo: Error on VM
                     await user.SendMessage(e.Message);
-                    NotifyDevs(Supporter.BuildExceptionMessage(e, "GetWeather()", request));
+                    NotifyDevs(BuildExceptionMessage(e, "GetWeather()", request));
                     await msg.Edit("I can't do this right now :(");
                     return null;
+                }
+            }
+        }
+
+        private async void GetRandomGIF(Channel channel)
+        {
+            using (var client = new HttpClient())
+            {
+                try
+                {
+                    string response = await client.GetStringAsync(string.Format("http://api.giphy.com/v1/gifs/random?api_key={0}"
+                   , Config.GiphyAPIKey));
+                    var requestObject = Newtonsoft.Json.Linq.JObject.Parse(response);
+                    var dataString = requestObject.GetValue("data").ToString();
+                    var dataObject = Newtonsoft.Json.Linq.JObject.Parse(dataString);
+                    string gifURL = dataObject.GetValue("image_original_url").ToString();
+                    await channel.SendMessage(gifURL);
+                }
+                catch (Exception e)
+                {
+                    await channel.SendMessage(e.Message);
+                }
+            }
+        }
+
+        private async void GetGIF(string keyword, Channel channel)
+        {
+            using (var client = new HttpClient())
+            {
+                try
+                {
+                    string response = await client.GetStringAsync(string.Format("http://api.giphy.com/v1/gifs/search?q={0}&api_key={1}&limit=1"
+                   , keyword
+                   , Config.GiphyAPIKey));
+                    var requestObject = Newtonsoft.Json.Linq.JObject.Parse(response);
+                    var dataString = requestObject.GetValue("data").ToString();
+                    JArray dataObject = Newtonsoft.Json.Linq.JArray.Parse(dataString);
+                    var arrayString = dataObject.First().ToString();
+                    var arrayObject = Newtonsoft.Json.Linq.JObject.Parse(arrayString);
+                    var imagesString = arrayObject.GetValue("images").ToString();
+                    var imagesObject = Newtonsoft.Json.Linq.JObject.Parse(imagesString);
+                    var fixedHeightString = imagesObject.GetValue("fixed_height").ToString();
+                    var fixedHeightObject = Newtonsoft.Json.Linq.JObject.Parse(fixedHeightString);
+                    string gifURL = fixedHeightObject.GetValue("url").ToString();
+                    await channel.SendMessage(string.Format("**#{0}**\r\n{1}"
+                        , keyword
+                        , gifURL));
+                }
+                catch (Exception e)
+                {
+                    if (e.Message.Equals("Sequence contains no elements") || e.Message.Equals("Die Sequenz enthält keine Elemente"))
+                    {
+                        await channel.SendMessage(string.Format("There are no results for **{0}** :("
+                            , keyword));
+                        return;
+                    }
+                    await channel.SendMessage(e.Message);
+                }
+            }
+        }
+
+        private async void GetTrendingGIF(Channel channel)
+        {
+            using (var client = new HttpClient())
+            {
+                try
+                {
+                    string response = await client.GetStringAsync(string.Format("http://api.giphy.com/v1/gifs/trending?api_key={0}&limit=1"
+                   , Config.GiphyAPIKey));
+                    var requestObject = Newtonsoft.Json.Linq.JObject.Parse(response);
+                    var dataString = requestObject.GetValue("data").ToString();
+                    JArray dataObject = Newtonsoft.Json.Linq.JArray.Parse(dataString);
+                    var arrayString = dataObject.First().ToString();
+                    var arrayObject = Newtonsoft.Json.Linq.JObject.Parse(arrayString);
+                    var imagesString = arrayObject.GetValue("images").ToString();
+                    var imagesObject = Newtonsoft.Json.Linq.JObject.Parse(imagesString);
+                    var fixedHeightString = imagesObject.GetValue("fixed_height").ToString();
+                    var fixedHeightObject = Newtonsoft.Json.Linq.JObject.Parse(fixedHeightString);
+                    string gifURL = fixedHeightObject.GetValue("url").ToString();
+                    await channel.SendMessage(gifURL);
+                }
+                catch (Exception e)
+                {
+                    await channel.SendMessage(e.Message);
                 }
             }
         }
@@ -1571,6 +1319,144 @@ namespace DiscordBot
                 , Supporter.Celcius(weather.temperature).ToString("0.#")
                 , Supporter.Celcius(weather.apparentTemperature).ToString("0.#")
                 , weather.windSpeed);
+        }
+
+        private async void StreamFileToVoiceChannel(string path, Channel vChannel)
+        {
+            var vClient = await client.GetService<AudioService>().Join(vChannel);
+            var channelCount = client.GetService<AudioService>().Config.Channels; // Get the number of AudioChannels our AudioService has been configured to use.
+            var OutFormat = new WaveFormat(48000, 16, channelCount); // Create a new Output Format, using the spec that Discord will accept, and with the number of channels that our client supports.
+            using (var MP3Reader = new Mp3FileReader(path)) // Create a new Disposable MP3FileReader, to read audio from the filePath parameter
+            using (var resampler = new MediaFoundationResampler(MP3Reader, OutFormat)) // Create a Disposable Resampler, which will convert the read MP3 data to PCM, using our Output Format
+            {
+                resampler.ResamplerQuality = 60; // Set the quality of the resampler to 60, the highest quality
+                int blockSize = OutFormat.AverageBytesPerSecond / 50; // Establish the size of our AudioBuffer
+                byte[] buffer = new byte[blockSize];
+                int byteCount;
+
+                while ((byteCount = resampler.Read(buffer, 0, blockSize)) > 0 && playing) // Read audio into our buffer, and keep a loop open while data is present
+                {
+                    if (byteCount < blockSize)
+                    {
+                        // Incomplete Frame
+                        for (int i = byteCount; i < blockSize; i++)
+                            buffer[i] = 0;
+                    }
+                    vClient.Send(buffer, 0, blockSize); // Send the buffer to Discord
+                }
+            }
+        }
+
+        private async void DownloadAudio(string URL)
+        {
+            string link = URL;
+            mediaMessage = await textChannel.SendMessage("Downloading audio...");
+            IEnumerable<YoutubeExtractor.VideoInfo> videoInfos = null;
+            try
+            {
+                videoInfos = DownloadUrlResolver.GetDownloadUrls(link);
+            }
+            catch (Exception)
+            {
+                await mediaMessage.Edit("Invalid link, " + senderName);
+                return;
+            }
+
+            VideoInfo video = videoInfos.First(info => info.VideoType == VideoType.Mp4 && info.Resolution == 0);
+            mediaName = video.Title;
+            audioPath = Path.Combine(Environment.CurrentDirectory, "files", "audio", video.Title + video.AudioExtension);
+            mp3Path = Path.Combine(Environment.CurrentDirectory, "files", "mp3", video.Title + ".mp3");
+            var audioDownloader = new VideoDownloader(video, audioPath);
+
+            audioDownloader.DownloadFinished += AudioDownloader_DownloadFinished;
+            audioDownloader.Execute();
+        }
+
+        private async void AudioDownloader_DownloadFinished(object sender, EventArgs e)
+        {
+            var waveProvider = new MediaFoundationReader(audioPath);
+            MediaFoundationEncoder.EncodeToMp3(waveProvider, mp3Path);
+            await mediaMessage.Edit(string.Format("Now playing **{0}**\r\nby **{1}**", mediaName, senderName));
+            StreamFileToVoiceChannel(mp3Path, vChannelToStream);
+        }
+
+        //    private void DownloadAudioYTE(string link)
+        //    {
+        //        IEnumerable<VideoInfo> videoInfos = DownloadUrlResolver.GetDownloadUrls(link);
+
+        //        VideoInfo video = videoInfos
+        ////.Where(info => info.CanExtractAudio)
+        //.OrderByDescending(info => info.AudioBitrate)
+        //.First();
+
+        //        if (video.RequiresDecryption)
+        //        {
+        //            DownloadUrlResolver.DecryptDownloadUrl(video);
+        //        }
+        //        audioPath = Path.Combine(Environment.CurrentDirectory, "files", "audio", video.Title + video.AudioExtension);
+        //        var audioDownloader = new AudioDownloader(video, audioPath);
+
+        //        audioDownloader.DownloadProgressChanged += (sender, args) => Console.WriteLine(args.ProgressPercentage * 0.85);
+        //        audioDownloader.AudioExtractionProgressChanged += (sender, args) => Console.WriteLine(85 + args.ProgressPercentage * 0.15);
+
+        //        audioDownloader.Execute();
+        //    }
+
+        private bool CreateCleverBotSession(string name = "Jenkins")
+        {
+            using (var client = new HttpClient())
+            {
+                var values = new Dictionary<string, string>
+            {
+       { "user", Config.CleverbotAPIUser },
+       { "key", Config.CleverbotAPIKey },
+       { "nick", name }
+            };
+
+                var content = new FormUrlEncodedContent(values);
+
+                var response = client.PostAsync("https://cleverbot.io/1.0/create", content);
+
+                response.Wait();
+
+                var responseString = response.Result.Content.ReadAsStringAsync();
+                var responseObject = Newtonsoft.Json.Linq.JObject.Parse(responseString.Result.ToString());
+                var status = responseObject.GetValue("status").ToString();
+                return (status == "success" || status == "Error: reference name already exists");
+            }
+        }
+
+        private string TalkWithCleverBot(string text, string name = "Jenkins")
+        {
+            using (var client = new HttpClient())
+            {
+                var values = new Dictionary<string, string>
+            {
+       { "user", Config.CleverbotAPIUser },
+       { "key", Config.CleverbotAPIKey },
+       { "nick", name },
+       { "text", text }
+
+            };
+
+                var content = new FormUrlEncodedContent(values);
+
+                var response = client.PostAsync("https://cleverbot.io/1.0/ask", content);
+
+                var responseString = response.Result.Content.ReadAsStringAsync();
+                response.Wait();
+                var responseObject = Newtonsoft.Json.Linq.JObject.Parse(responseString.Result.ToString());
+                var answer = responseObject.GetValue("response").ToString();
+                return answer;
+            }
+        }
+
+        private void CheckUser(User user)
+        {
+            if (!Jenkins.Users.IsUserRegistered(user.Id) && !user.IsBot)
+            {
+                Jenkins.Users.AddUser(user);
+            }
         }
 
         private void Log(object sender, LogMessageEventArgs e)

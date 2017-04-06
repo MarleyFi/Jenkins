@@ -616,6 +616,9 @@
     <Compile Include="..\Discord.Net\TaskManager.cs">
       <Link>TaskManager.cs</Link>
     </Compile>
+    <Compile Include="API\Client\Rest\AddReaction.cs" />
+    <Compile Include="API\Client\Rest\DeleteReaction.cs" />
+    <Compile Include="Events\MessageReactionAddEventArgs.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

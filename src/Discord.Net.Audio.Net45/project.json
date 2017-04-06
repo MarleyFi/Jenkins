@@ -1,14 +1,15 @@
-{
+﻿{
   "dependencies": {
-    "Newtonsoft.Json": "8.0.1",
-    "Nito.AsyncEx": "3.0.1"
+    "Microsoft.Bcl.Build": "1.0.21",
+    "Newtonsoft.Json": "10.0.2",
+    "Nito.AsyncEx": "4.0.1"
   },
   "frameworks": {
-    "net45": { }
+    "net45": {}
   },
   "runtimes": {
-    "win": { },
-    "win-x86": { },
-    "win-x64": { }
+    "win": {},
+    "win-x86": {},
+    "win-x64": {}
   }
 }

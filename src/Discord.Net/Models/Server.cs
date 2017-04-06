@@ -225,6 +225,8 @@ namespace Discord
             catch (HttpException ex) when (ex.StatusCode == HttpStatusCode.NotFound) { }
         }
 
+        
+
         #region Bans
         public async Task<IEnumerable<User>> GetBans()
         {

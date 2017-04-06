@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using static Discord.Server;
 
 namespace Discord
 {
@@ -25,6 +26,8 @@ namespace Discord
         public event EventHandler<MessageEventArgs> MessageSent = delegate { };
         /// <summary>When a message is updated. Discord API Event name: MESSAGE_UPDATE.</summary>
         public event EventHandler<MessageUpdatedEventArgs> MessageUpdated = delegate { };
+        /// <summary>When a message is updated. Discord API Event name: MESSAGE_UPDATE.</summary>
+        //public event EventHandler<MessageReactionAddEventArgs> MessageReactionAdded = delegate { };
         /// <summary>When properties about the user change. Discord API Event name: USER_UPDATE.</summary>
         public event EventHandler<ProfileUpdatedEventArgs> ProfileUpdated = delegate { };
         /// <summary>When a server role is created. Discord API Event name: GUILD_ROLE_CREATE.</summary>
@@ -84,6 +87,9 @@ namespace Discord
             => OnEvent(MessageSent, new MessageEventArgs(msg));
         private void OnMessageUpdated(Message before, Message after)
             => OnEvent(MessageUpdated, new MessageUpdatedEventArgs(before, after));
+        //private void OnMessageReactionAdd(Message message, Emoji emoji)
+        //    => OnEvent(MessageReactionAdded, new MessageReactionAddEventArgs(message, emoji));
+
 
         private void OnProfileUpdated(Profile before, Profile after)
             => OnEvent(ProfileUpdated, new ProfileUpdatedEventArgs(before, after));

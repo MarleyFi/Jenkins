@@ -185,7 +185,8 @@ namespace Discord.Commands
 						catch (Exception ex)
 						{
 							OnCommandError(CommandErrorType.Exception, eventArgs, ex);
-						}
+                            DiscordBotLog.AppendLog(DiscordBotLog.BuildCommandExceptionMessage(ex, eventArgs));
+                        }
 						return;
 					}
 					var errorArgs2 = new CommandEventArgs(e.Message, null, null);

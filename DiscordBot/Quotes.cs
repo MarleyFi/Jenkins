@@ -1,76 +1,93 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
+using System.Data;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using Discord;
 
 namespace DiscordBot
 {
-    class Quotes
+    internal class Quotes
     {
+        #region Methods
 
-        private string filePath;
-
-        public Quotes(string path)
+        public void AddQuote(User user, string message, string owner)
         {
-            filePath = path;
-            ReadQuotes();
-        }
-
-        private void ReadQuotes()
-        {
-            try
-            {
-                quotes = File.ReadAllLines(filePath);
-            }
-            catch (Exception e)
-            {
-                quotes = exampleQuotes;
-            }
-        }
-
-        public void AddQuote(string quote)
-        {
-            List<string> quoteList = getListOfQuotes();
-            quoteList.Add(quote);
-            quotes = quoteList.ToArray();
-            File.WriteAllLines(filePath, quotes);
+            Jenkins.Database.Tables["QUOTES"].Rows.Add(user.Id, message, owner, DateTime.Now);
+            Jenkins.Write();
         }
 
         public string GetRandomQuote()
         {
+            DataTable insultsTable = Jenkins.Database.Tables["QUOTES"];
+            var quotes = insultsTable.AsEnumerable();
             Random rnd = new Random();
-            int quoteIndex = rnd.Next(0, quotes.Length);
-            return "'**"+quotes[quoteIndex]+"**'\r\n";
+            var quote = quotes.ElementAt<DataRow>(Supporter.GetRandom(quotes.Count()));
+            return Supporter.BuildQuote(quote["MESSAGE"].ToString(), quote["OWNER"].ToString());
         }
 
-        public bool GetSpecificQuote(string text, out string quote)
+        public string GetQuote(string message)
         {
-            List<string> quoteList = getListOfQuotes();
+            DataTable insultsTable = Jenkins.Database.Tables["QUOTES"];
+            var quotes = insultsTable.AsEnumerable();
+            quotes = quotes.Where(r => r.Field<string>("MESSAGE").ToLower().Contains(message.ToLower()));
+            var quote = quotes.FirstOrDefault();
+            return Supporter.BuildQuote(quote["MESSAGE"].ToString(), quote["OWNER"].ToString());
+        }
 
-            List<string> searchResults = quoteList.FindAll(s => s.Contains(text));
-            if(searchResults.Count >= 1)
+        public string GetQuoteOf(string owner)
+        {
+            DataTable insultsTable = Jenkins.Database.Tables["QUOTES"];
+            var quotes = insultsTable.AsEnumerable();
+            quotes = quotes.Where(r => r.Field<string>("OWNER").ToLower().Contains(owner.ToLower()));
+            Random rnd = new Random();
+            var quote = quotes.ElementAt<DataRow>(Supporter.GetRandom(quotes.Count()));
+            return Supporter.BuildQuote(quote["MESSAGE"].ToString(), quote["OWNER"].ToString());
+        }
+
+        public string ListQuotes(User user, ulong serverId)
+        {
+            DataTable insultsTable = Jenkins.Database.Tables["QUOTES"];
+            var quotes = insultsTable.AsEnumerable();
+            if (!Jenkins.Users.IsUserAdmin(user.Id, serverId))
             {
-                quote = searchResults[0];
-                return true;
+                quotes = quotes.Where(r => r.Field<ulong>("USERID").Equals(user.Id));
             }
-            string command = string.Format("/addQuote text:'{0}'", text);
-            quote = string.Format("I've found nothing matching your search to {0} :(\r\nBut I could add it to my vocabulary for you with this command:\r\n\r\n{1}", text, command);
-            return false;
+            int index = 0;
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("<- - - **Quotes** - - ->");
+            foreach (var quote in quotes)
+            {
+                sb.Append("- [");
+                sb.Append(index);
+                sb.Append("] '");
+                sb.Append(quote.Field<string>("MESSAGE"));
+                sb.Append("'");
+                sb.AppendLine();
+                sb.Append("by ");
+                sb.Append("*" + quote.Field<string>("OWNER") + "*");
+                sb.AppendLine();
+                index++;
+            }
+            if (quotes.Count() == 0)
+            {
+                sb.AppendLine("There are no quotes yet :(");
+                sb.AppendLine("PS: You can add some with /addQuote");
+            }
+            return sb.ToString();
         }
 
-        private List<string> getListOfQuotes()
+        public void DelQuote(User user, int index, ulong serverId)
         {
-            return new List<string>(quotes);
+            DataTable insultsTable = Jenkins.Database.Tables["QUOTES"];
+            var quotes = insultsTable.AsEnumerable();
+            if (!Jenkins.Users.IsUserAdmin(user.Id, serverId))
+            {
+                quotes = quotes.Where(r => r.Field<string>("USERID").Equals(user.Id));
+            }
+            quotes.ElementAt<DataRow>(index).Delete();
+            Jenkins.Write();
         }
 
-        public string[] exampleQuotes = {
-            "Ich fick richtig gerne!",
-            "Ficken das isses. Schön die alde weghauen.",
-            "Flatsch" };
-
-        public string[] quotes;
-
+        #endregion Methods
     }
 }

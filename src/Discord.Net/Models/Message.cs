@@ -203,8 +203,9 @@ namespace Discord
         public bool IsTTS { get; internal set; }
 		/// <summary> Returns the state of this message. Only useful if UseMessageQueue is true. </summary>
 		public MessageState State { get; internal set; }
-		/// <summary> Returns the raw content of this message as it was received from the server. </summary>
-		public string RawText { get; internal set; }
+
+        /// <summary> Returns the raw content of this message as it was received from the server. </summary>
+        public string RawText { get; internal set; }
 		/// <summary> Returns the content of this message with any special references such as mentions converted. </summary>
 		public string Text { get; internal set; } 
 		/// <summary> Returns the timestamp for when this message was sent. </summary>
@@ -328,6 +329,31 @@ namespace Discord
 				MentionedRoles = mentionedRoles;
 			}
         }
+
+        //#region Reactions
+        //public async Task<IEnumerable<User>> AddReactions()
+        //{
+        //    var response = await Client.ClientAPI.Send(new GetBansRequest(Id)).ConfigureAwait(false);
+        //    return response.Select(x =>
+        //    {
+        //        var user = new User(Client, x.Id, this);
+        //        user.Update(x);
+        //        return user;
+        //    });
+        //}
+
+        //public async Task<IEnumerable<User>> DeleteReactions()
+        //{
+        //    var response = await Client.ClientAPI.Send(new GetBansRequest(Id)).ConfigureAwait(false);
+        //    return response.Select(x =>
+        //    {
+        //        var user = new User(Client, x.Id, this);
+        //        user.Update(x);
+        //        return user;
+        //    });
+        //}
+
+        //#endregion
 
         public Task Edit(string text)
         {
