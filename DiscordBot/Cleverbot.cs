@@ -68,13 +68,21 @@ namespace DiscordBot
 
                 var content = new FormUrlEncodedContent(values);
 
-                var response = client.PostAsync("https://cleverbot.io/1.0/ask", content);
+                try
+                {
+                    var response = client.PostAsync("https://cleverbot.io/1.0/ask", content);
 
-                var responseString = response.Result.Content.ReadAsStringAsync();
-                response.Wait();
-                var responseObject = Newtonsoft.Json.Linq.JObject.Parse(responseString.Result.ToString());
-                var answer = responseObject.GetValue("response").ToString();
-                return answer;
+                    var responseString = response.Result.Content.ReadAsStringAsync();
+                    response.Wait();
+                    var responseObject = Newtonsoft.Json.Linq.JObject.Parse(responseString.Result.ToString());
+                    var answer = responseObject.GetValue("response").ToString();
+                    return answer;
+                }
+                catch (Exception e)
+                {
+                    Bot.NotifyDevs(Supporter.BuildExceptionMessage(e, "TalkWithCleverBot()", text));
+                    return "The Cleverbot-API is currently unavailable.";
+                }
             }
         }
 

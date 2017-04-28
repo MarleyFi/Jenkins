@@ -31,6 +31,10 @@ namespace DiscordBot
 
         public static Twitch Twitch = new Twitch();
 
+        public static FunFacts FunFacts = new FunFacts();
+
+        public static GamesSync GamesSync = new GamesSync();
+
         #endregion Modules
 
         #endregion Internal Variables
@@ -59,6 +63,8 @@ namespace DiscordBot
             Database.Tables.Add(CreateTwitchStreamsTable());
             Database.Tables.Add(CreateFoodOptionsTable());
             Database.Tables.Add(CreateObserveTable());
+            Database.Tables.Add(CreateGameSyncServersTable());
+            Database.Tables.Add(CreateGamesTable()); 
             Read();
             CheckAndScheduleBackUp(Bot.Config.DailyBackupEnabled);
             if (Bot.Config.DailyVote)
@@ -182,7 +188,6 @@ namespace DiscordBot
         /// </summary>
         private static DataTable CreateUsersTable()
         {
-            // Here we create a DataTable with four columns.
             DataTable usersTable = new DataTable("USERS");
             usersTable.Columns.Add("NAME", typeof(string));
             usersTable.Columns.Add("ID", typeof(ulong));
@@ -193,7 +198,6 @@ namespace DiscordBot
 
         private static DataTable CreateConfigTable()
         {
-            // Here we create a DataTable with four columns.
             DataTable usersTable = new DataTable("CONFIGS");
             usersTable.Columns.Add("PROFILENAME", typeof(string));
             usersTable.Columns.Add("INSULTCHANCE", typeof(int));
@@ -324,6 +328,23 @@ namespace DiscordBot
             usersTable.Columns.Add("SERVERNAME", typeof(string));
             usersTable.PrimaryKey = new DataColumn[] { usersTable.Columns["SERVERID"] };
             return usersTable;
+        }
+
+        private static DataTable CreateGameSyncServersTable()
+        {
+            DataTable gameHelperTable = new DataTable("GAMESYNCSERVERS");
+            gameHelperTable.Columns.Add("SERVERID", typeof(ulong));
+            gameHelperTable.PrimaryKey = new DataColumn[] { gameHelperTable.Columns["SERVERID"] };
+            return gameHelperTable;
+        }
+
+        private static DataTable CreateGamesTable()
+        {
+            DataTable gameHelperTable = new DataTable("GAMES");
+            gameHelperTable.Columns.Add("NAME", typeof(string));
+            gameHelperTable.Columns.Add("ISRESTRICTED", typeof(bool));
+            gameHelperTable.PrimaryKey = new DataColumn[] { gameHelperTable.Columns["NAME"] };
+            return gameHelperTable;
         }
 
         #endregion Tables

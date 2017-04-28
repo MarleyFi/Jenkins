@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Discord;
 
@@ -506,5 +507,46 @@ namespace DiscordBot
                                           DateTimeStyles.None,
                                           out ignored);
         }
+
+        #region Discord
+
+        public static string[] GetAllServerNames()
+        {
+            var servers = Bot.Client.Servers;
+            List<string> serverNames = new List<string>();
+            foreach (var server in servers)
+            {
+                serverNames.Add(server.Name);
+            }
+            return serverNames.ToArray();
+        }
+
+        public static bool TryGetServerNameById(ulong serverId, out string serverName)
+        {
+            var server = Bot.Client.GetServer(serverId);
+            serverName = (server == null ? "" : server.Name);
+            return (server != null);
+        }
+
+        public static bool TryGetServerById(ulong serverId, out Server server)
+        {
+            server = Bot.Client.GetServer(serverId);
+            return (server != null);
+        }
+
+        public static bool TryGetServerIdByName(string name, out ulong serverId)
+        {
+            var server = Bot.Client.Servers.Where(r => r.Name.ToLower().Contains(name.ToLower())).First();
+            serverId = (server == null ? 0 : server.Id);
+            return (server != null);
+        }
+
+        public static bool TryGetServerByName(string name, out Server server)
+        {
+            server = Bot.Client.Servers.Where(r => r.Name.ToLower().Contains(name.ToLower())).First();
+            return (server != null);
+        }
+
+        #endregion Discord
     }
 }

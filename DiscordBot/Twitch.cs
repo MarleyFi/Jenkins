@@ -11,7 +11,7 @@ namespace DiscordBot
     internal class Twitch
     {
         private System.Timers.Timer streamCheck; 
-        public Twitch()
+        public void Init()
         {
             streamCheck = new System.Timers.Timer((Bot.Config.TwitchCheckInterval * 1000));
             streamCheck.Elapsed += StreamCheck_Elapsed;

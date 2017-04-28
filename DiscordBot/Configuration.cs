@@ -71,6 +71,8 @@ namespace DiscordBot
 
         public bool CleverbotEnabled { get; set; }
 
+        public bool GamesSyncEnabled { get; set; }
+
         public bool DailyVote { get; set; }
 
         public string DailyVoteStart { get; set; }
@@ -128,7 +130,8 @@ namespace DiscordBot
                 this.TwitchChannelLimit = int.Parse(parsedData[General]["TwitchChannelLimit"]);
                 this.GiphySearchLimit = int.Parse(parsedData[General]["GiphySearchLimit"]);
                 this.CleverbotNick = parsedData[General]["CleverbotNick"];
-                this.CleverbotEnabled = bool.Parse(parsedData[General]["CleverbotEnabled"]); 
+                this.CleverbotEnabled = bool.Parse(parsedData[General]["CleverbotEnabled"]);
+                this.GamesSyncEnabled = bool.Parse(parsedData[General]["GamesSyncEnabled"]);
                 this.DailyVote = bool.Parse(parsedData[General]["DailyVote"]);
                 this.DailyVoteStart = parsedData[General]["DailyVoteStart"];
                 this.DailyVoteEnd = parsedData[General]["DailyVoteEnd"];
@@ -168,6 +171,7 @@ namespace DiscordBot
                 this.GiphySearchLimit = 100;
                 this.CleverbotNick = "JenkinsBOT";
                 this.CleverbotEnabled = false;
+                this.GamesSyncEnabled = false;
                 this.DailyVote = false;
                 this.DailyVoteStart = "00:00:00";
                 this.DailyVoteEnd = "00:01:00";

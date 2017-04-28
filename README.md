@@ -1,5 +1,5 @@
 # Jenkins the Discord-Bot
-[![Discord](https://discordapp.com/api/guilds/201693574889340928/widget.png)](https://discord.gg/UKhh3US)
+[![Discord](https://discord.gg/UKhh3US)](https://discord.gg/UKhh3US)
 
 ### His skills
 - /help - Helping things and stuff [commands] [cmds] [?] 
