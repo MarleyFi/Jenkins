@@ -174,7 +174,7 @@ namespace DiscordBot
             Bot.NotifyDevs(string.Format("Backup for **{0}** complete. :floppy_disk::white_check_mark:",
                 Supporter.GetFileDateString(DateTime.Now)));
 
-            CheckAndScheduleBackUp();
+            CheckAndScheduleBackUp(true);
         }
 
         #endregion Backup
