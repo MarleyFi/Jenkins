@@ -547,6 +547,12 @@ namespace DiscordBot
             return (server != null);
         }
 
+        public static Color GetRandomColor()
+        {
+            Random random = new Random();
+            return new Color(random.Next(256), random.Next(256), random.Next(256));
+        }
+
         #endregion Discord
     }
 }

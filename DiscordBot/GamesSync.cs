@@ -93,6 +93,7 @@ namespace DiscordBot
                 currentGames.Add(user.CurrentGame.Value.Name);
             }
 
+            CheckForNewServerroles(server, currentGames.ToArray());
             games = UpdateGames(currentGames.ToArray(), games);
 
             foreach (User currentPlayingUser in currentPlayingUsers)
@@ -112,6 +113,22 @@ namespace DiscordBot
                 }
             }
             return GetAvailableGames();
+        }
+
+        private void CheckForNewServerroles(Server server, string[] currentGames)
+        {
+            var duplicateGames = currentGames.GroupBy(x => x)
+                        .Where(group => group.Count() > 1)
+                        .Select(group => group.Key);
+
+            foreach (var game in duplicateGames)
+            {
+                if(server.FindRoles(game, true).Count() == 0)
+                {
+                    Bot.NotifyDevs("Created Role **" + game + "** in Server **" + server.Name + "**");
+                    server.CreateRole(game, null, Supporter.GetRandomColor(), false, true);
+                }
+            }
         }
 
         private void CompareRolesForUserAndAssign(User user, string[] games)
