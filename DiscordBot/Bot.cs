@@ -231,7 +231,7 @@ namespace DiscordBot
                 .Description("For really important connection-Tests and stuff")
                 .Do(async (e) =>
                 {
-                    await e.Channel.SendMessage("Pong!");
+                    await e.Channel.SendMessage("Pong! - Jenkins.NET");
                 });
 
             command.CreateCommand("shortURL")
