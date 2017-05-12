@@ -33,6 +33,8 @@ namespace DiscordBot
 
         public static GamesSync GamesSync = new GamesSync();
 
+        public static Websites Websites = new Websites();
+
         #endregion Modules
 
         #endregion Internal Variables
@@ -63,6 +65,7 @@ namespace DiscordBot
             Database.Tables.Add(CreateObserveTable());
             Database.Tables.Add(CreateGameSyncServersTable());
             Database.Tables.Add(CreateGamesTable());
+            Database.Tables.Add(CreateWebsitesTable());
             Read();
             CheckAndScheduleBackUp(Bot.Config.DailyBackupEnabled);
             if (Bot.Config.DailyVote)
@@ -342,6 +345,16 @@ namespace DiscordBot
             gameHelperTable.Columns.Add("ISRESTRICTED", typeof(bool));
             gameHelperTable.PrimaryKey = new DataColumn[] { gameHelperTable.Columns["NAME"] };
             return gameHelperTable;
+        }
+
+        private static DataTable CreateWebsitesTable()
+        {
+            DataTable websitesTable = new DataTable("WEBSITES");
+            websitesTable.Columns.Add("URL", typeof(string));
+            websitesTable.Columns.Add("TAGS", typeof(string));
+            websitesTable.Columns.Add("NSFW", typeof(bool));
+            websitesTable.PrimaryKey = new DataColumn[] { websitesTable.Columns["URL"] };
+            return websitesTable;
         }
 
         #endregion Tables

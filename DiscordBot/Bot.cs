@@ -279,6 +279,48 @@ namespace DiscordBot
                     }
                 });
 
+            command.CreateCommand("website")
+                .Description("Try it!")
+                .Parameter("tags", ParameterType.Unparsed)
+                .Alias(new string[] { "pr0", "useless", "lol", "web", "browser", "internet" })
+                .Do(async (e) =>
+                {
+                    await e.Message.Delete();
+                    if(e.Args[0] != string.Empty)
+                    {
+                        await e.Channel.SendMessage(Jenkins.Websites.GetWebsite(Jenkins.Websites.ExtractTagsToList(e.Args[0])));
+                    }
+                    else
+                    {
+                        await e.Channel.SendMessage(Jenkins.Websites.GetRandomWebsite());
+                    }
+                    
+                });
+
+            command.CreateCommand("addWebsite")
+                .Description("Adds a website append tags with commas like nsfw or just names")
+                .Parameter("tags", ParameterType.Multiple)
+                .Alias(new string[] { "addwebsite", "aw"})
+                .Do(async (e) =>
+                {
+                    await e.Message.Delete();
+                    Jenkins.Websites.AddWebsite(e.Args[0].ToString(), Jenkins.Websites.ConvertTagsForDatabase(e.Args));
+                });
+
+            command.CreateCommand("delWebsite")
+                .Description("Deletes a website")
+                .Parameter("keyword", ParameterType.Required)
+                .Hide()
+                .Alias(new string[] { "delwebsite", "dw" })
+                .Do(async (e) =>
+                {
+                    if (!Jenkins.Users.IsUserDev(e.Message.User.Id))
+                        return;
+
+                        await e.Message.Delete();
+                    await e.Channel.SendMessage(Jenkins.Websites.DelWebsite(e.Args[0].ToString()));
+                });
+
             #endregion General
 
             #region Users
