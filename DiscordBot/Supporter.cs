@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Text;
 using Discord;
@@ -222,7 +221,7 @@ namespace DiscordBot
 
         public static string BuildDebugUserMessage(string message, User user, Channel channel)
         {
-            if(channel.IsPrivate)
+            if (channel.IsPrivate)
             {
                 return string.Format("User **{1}** used in **{3}** at *{2}*\r\n- >**{0}**"
                 , message
@@ -239,7 +238,6 @@ namespace DiscordBot
                 , channel.Name
                 , channel.Server.Name);
             }
-            
         }
 
         public static string BuildLogMessage(MessageEventArgs msg)
@@ -437,7 +435,6 @@ namespace DiscordBot
 
         public static string GetDuration(this TimeSpan span)
         {
-
             if (span == TimeSpan.Zero) return "0 minutes";
 
             var sb = new StringBuilder();
@@ -448,12 +445,10 @@ namespace DiscordBot
             if (span.Minutes > 0)
                 sb.AppendFormat("{0} minute{1} ", span.Minutes, span.Minutes > 1 ? "s" : String.Empty);
             return sb.ToString();
-
         }
 
         public static string GetDurationGerman(this TimeSpan span)
         {
-
             if (span == TimeSpan.Zero) return "0 minuten";
 
             var sb = new StringBuilder();
@@ -464,7 +459,6 @@ namespace DiscordBot
             if (span.Minutes > 0)
                 sb.AppendFormat("{0} Minute{1} ", span.Minutes, span.Minutes > 1 ? "n" : String.Empty);
             return sb.ToString();
-
         }
 
         public static string BuildExceptionMessage(Exception e, string whileFunction = "", object parameter = null)
@@ -496,7 +490,6 @@ namespace DiscordBot
                 dt.ToString("MMM", CultureInfo.InvariantCulture),
                 dt.Day,//dt.ToString("ddd", CultureInfo.InvariantCulture),
                 dt.Year);
-
         }
 
         public static bool ValidateTime(string time)

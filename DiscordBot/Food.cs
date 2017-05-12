@@ -1,16 +1,12 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Xml;
 using Discord;
 using Newtonsoft.Json.Linq;
 
@@ -18,7 +14,6 @@ namespace DiscordBot
 {
     public static class Food
     {
-
         #region Variables
 
         public enum Day
@@ -307,7 +302,6 @@ namespace DiscordBot
             Bot.NotifyDevs(string.Format("Notifed {0} users to vote", count));
         }
 
-
         public static void AddFoodOption(string krz, string name, string desc = null, IEnumerable<Day> days = null, string info = null)
         {
             var table = Jenkins.Database.Tables["FOODOPTIONS"];
@@ -360,7 +354,6 @@ namespace DiscordBot
                 sb.AppendLine(string.Format("< - - - **Specific possibilities for {0}** - - ->", day));
                 sb.AppendLine();
             }
-
 
             foreach (var foodOption in foodOptionsForDay)
             {
@@ -427,7 +420,6 @@ namespace DiscordBot
                 optionsList.Add(sb.ToString());
                 sb.Clear();
             }
-
 
             foreach (var foodOption in foodOptionsForDay)
             {
@@ -550,7 +542,6 @@ namespace DiscordBot
 
                 Timer readNewOptionsTimer = new System.Threading.Timer(x =>
                 {
-
                     var task = client.DownloadStringTaskAsync(readUrl);
                     task.Wait();
                     var html = task.Result;
@@ -595,7 +586,6 @@ namespace DiscordBot
                     }
                     else
                     {
-
                     }
                     index = index + 1;
                 }
@@ -611,7 +601,6 @@ namespace DiscordBot
                     }
                     else
                     {
-
                     }
                     index = index + 1;
                 }
@@ -627,7 +616,6 @@ namespace DiscordBot
                     }
                     else
                     {
-
                     }
                     index = index + 1;
                 }
@@ -673,7 +661,6 @@ namespace DiscordBot
 
         private static Day GetDay(string day)
         {
-
             //switch (day)
             //{
             //    case "montag":

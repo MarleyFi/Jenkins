@@ -2,16 +2,14 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Discord;
 
 namespace DiscordBot
 {
-    class GamesSync
+    internal class GamesSync
     {
-        const string TblName = "GAMESYNCSERVERS";
+        private const string TblName = "GAMESYNCSERVERS";
 
         public Server[] SyncingServers;
 
@@ -62,7 +60,7 @@ namespace DiscordBot
             DefineServers();
             foreach (Server server in SyncingServers)
             {
-                if(server != null)
+                if (server != null)
                     CheckUsersOfServer(server);
             }
             SetUpTimer(new TimeSpan(0, 1, 0));
@@ -123,7 +121,7 @@ namespace DiscordBot
 
             foreach (var game in duplicateGames)
             {
-                if(server.FindRoles(game, true).Count() == 0)
+                if (server.FindRoles(game, true).Count() == 0)
                 {
                     Bot.NotifyDevs("Created Role **" + game + "** in Server **" + server.Name + "**");
                     server.CreateRole(game, null, Supporter.GetRandomColor(), false, true);

@@ -1,19 +1,19 @@
-﻿using SpotifyAPI.Web;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using Discord.Commands;
+using SpotifyAPI.Local;
+using SpotifyAPI.Web;
 using SpotifyAPI.Web.Auth;
 using SpotifyAPI.Web.Enums;
 using SpotifyAPI.Web.Models;
+
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
-using Discord.Commands;
-using SpotifyAPI.Local;
 
 namespace DiscordBot
 {
-    static class Spotify // fkin' Spotify lul
+    internal static class Spotify // fkin' Spotify lul
     {
         public static SpotifyWebAPI spotify;
         public static SpotifyLocalAPI API;
@@ -43,16 +43,12 @@ namespace DiscordBot
             //    return;
             //}
 
-
-
             //savedTracksCountLabel.Text = savedTracks.Count.ToString();
             //savedTracks.ForEach(track => savedTracksListView.Items.Add(new ListViewItem()
             //{
-
             //    Text = track.Name,
             //    SubItems = { string.Join(",", track.Artists.Select(source => source.Name)), track.Album.Name }
             //}));
-
 
             //playlistsCountLabel.Text = playlists.Count.ToString();
             //playlists.ForEach(playlist => playlistsListBox.Items.Add(playlist.Name));
@@ -131,7 +127,6 @@ namespace DiscordBot
                 Console.WriteLine(ex.Message);
                 Console.WriteLine("Writing log...");
                 DiscordBotLog.AppendLog(DiscordBotLog.BuildRuntimeExceptionMessage(ex));
-
             }
 
             if (spotify == null)

@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
 
 namespace DiscordBot
 {
@@ -28,7 +23,6 @@ namespace DiscordBot
             {
                 return "math";
             }
-
             else if (arg.Contains("/") || IsMonth(arg))
             {
                 return "date";
@@ -55,7 +49,7 @@ namespace DiscordBot
             DateTime dt;
             if (DateTime.TryParse(arg, out dt))
             {
-                return dt.ToString("MM/dd").Replace('.','/');
+                return dt.ToString("MM/dd").Replace('.', '/');
             }
             else
             {
@@ -82,7 +76,6 @@ namespace DiscordBot
                 {
                     info = "#FunFact about **" + term + "**";
                     return webClient.DownloadString(request);
-
                 }
                 catch (Exception e)
                 {

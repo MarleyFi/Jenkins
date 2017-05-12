@@ -141,7 +141,7 @@ namespace DiscordBot
                 this.OwnerID = ulong.Parse(parsedData[Admin]["OwnerID"]);
                 this.AdminRoleName = parsedData[Admin]["AdminRoleName"];
                 this.NukeLimit = int.Parse(parsedData[Admin]["NukeLimit"]);
-                this.DailyBackupEnabled = bool.Parse(parsedData[Admin]["DailyBackupEnabled"]); 
+                this.DailyBackupEnabled = bool.Parse(parsedData[Admin]["DailyBackupEnabled"]);
                 this.DailyBackupTime = parsedData[Admin]["DailyBackupTime"];
                 this.DiscordToken = parsedData[Apis]["DiscordToken"];
                 this.GoogleAPIKey = parsedData[Apis]["GoogleAPIKey"];
@@ -151,7 +151,7 @@ namespace DiscordBot
                 this.DarkskyAPIKey = parsedData[Apis]["DarkskyAPIKey"];
                 this.TwitchAPIKey = parsedData[Apis]["TwitchAPIKey"];
                 this.GiphyAPIKey = parsedData[Apis]["GiphyAPIKey"];
-                this.SpotifyAPIKey = parsedData[Apis]["SpotifyAPIKey"]; 
+                this.SpotifyAPIKey = parsedData[Apis]["SpotifyAPIKey"];
                 ParseSuccessfull = true;
             }
             catch (Exception e)
@@ -183,7 +183,7 @@ namespace DiscordBot
                 this.NukeLimit = 50;
                 this.DailyBackupEnabled = true;
                 this.DailyBackupTime = "02:00:00";
-                this.DiscordToken = discordToken; 
+                this.DiscordToken = discordToken;
                 this.GoogleAPIKey = string.Empty;
                 this.GoogleSearchEngineKey = string.Empty;
                 this.CleverbotAPIUser = string.Empty;
@@ -197,7 +197,7 @@ namespace DiscordBot
 
         public string GetConfiguration(bool censor = true)
         {
-            if(!ParseSuccessfull)
+            if (!ParseSuccessfull)
             {
                 return "Config is damaged.\r\nDefault.cfg was loaded.";
             }
@@ -218,7 +218,7 @@ namespace DiscordBot
             }
 
             sb.AppendLine();
-            sb.AppendLine("I'm online for **" + Supporter.GetTimeSince(DateTime.Parse(parsedData.Sections[General]["LastLoad"]))+"** right now");
+            sb.AppendLine("I'm online for **" + Supporter.GetTimeSince(DateTime.Parse(parsedData.Sections[General]["LastLoad"])) + "** right now");
 
             return sb.ToString();
         }

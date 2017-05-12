@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
 using Cleverbot.Net;
 
 namespace DiscordBot
@@ -53,7 +51,7 @@ namespace DiscordBot
         /// </summary>
         /// <param name="text"></param>
         /// <returns></returns>
-        public static string TalkWithCleverBot(string text) 
+        public static string TalkWithCleverBot(string text)
         {
             using (var client = new HttpClient())
             {

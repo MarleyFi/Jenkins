@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace DiscordBot
 {
@@ -64,7 +62,7 @@ namespace DiscordBot
             Database.Tables.Add(CreateFoodOptionsTable());
             Database.Tables.Add(CreateObserveTable());
             Database.Tables.Add(CreateGameSyncServersTable());
-            Database.Tables.Add(CreateGamesTable()); 
+            Database.Tables.Add(CreateGamesTable());
             Read();
             CheckAndScheduleBackUp(Bot.Config.DailyBackupEnabled);
             if (Bot.Config.DailyVote)
@@ -127,7 +125,6 @@ namespace DiscordBot
             {
                 answer = "Daily-backup :floppy_disk: is currently not activated.";
             }
-
 
             //waits certan time and run the code
             //Task.Delay(ts).ContinueWith((x) => DoBackup());

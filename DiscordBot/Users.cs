@@ -93,7 +93,7 @@ namespace DiscordBot
 
         #region Basic User Methods
 
-        public bool GetIDofUser(string username, out ulong userId)
+        public bool TryGetUserId(string username, out ulong userId)
         {
             string userEXP = string.Format("NAME = '{0}'", username);
             DataRow[] userRows = Jenkins.Database.Tables["USERS"].Select(userEXP);
@@ -121,7 +121,7 @@ namespace DiscordBot
             Jenkins.Write();
         }
 
-        public string ListUsers()
+        public string ListUsers() // ToDo: Deprecated
         {
             DataRow[] userRows = Jenkins.Database.Tables["USERS"].Select("");
 

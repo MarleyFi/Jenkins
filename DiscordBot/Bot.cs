@@ -24,6 +24,8 @@ namespace DiscordBot
 
         #endregion Internal Variables
 
+        #region Bot
+
         #region Init
 
         public Bot(Configuration config)
@@ -31,11 +33,11 @@ namespace DiscordBot
             Config = config;
             Client = new DiscordClient();
             Jenkins.Init(); // JenkinsDB-initialising
-            Memes.Init(); // Why static? 
+            Memes.Init(); // Why static?
             Spotify.Init();
             Cleverbot.Init();
             Jenkins.Twitch.Init(); // Why not?
-            //Jenkins.GamesSync.Init(); 
+            //Jenkins.GamesSync.Init();
 
             Client = new DiscordClient(input => // Setting up Discord-Client
             {
@@ -306,7 +308,7 @@ namespace DiscordBot
                     await e.Message.Delete();
 
                     ulong userId;
-                    if (!Jenkins.Users.GetIDofUser(e.Args[0].ToString(), out userId))
+                    if (!Jenkins.Users.TryGetUserId(e.Args[0].ToString(), out userId))
                     {
                         await e.User.SendMessage(string.Format("I'm sorry but I dont know **{0}** :(\r\nHint: It have to be the real name, not the nickname."
                             , (e.Args[0].ToString())));
@@ -397,7 +399,7 @@ namespace DiscordBot
                     }
                     await e.Message.Delete();
                     ulong userID;
-                    if (Jenkins.Users.GetIDofUser(e.Args[0], out userID))
+                    if (Jenkins.Users.TryGetUserId(e.Args[0], out userID))
                     {
                         Jenkins.Insults.AddVictim(userID);
                     }
@@ -436,7 +438,7 @@ namespace DiscordBot
                     await e.Message.Delete();
 
                     ulong userId;
-                    if (Jenkins.Users.GetIDofUser(e.Args[0].ToString(), out userId))
+                    if (Jenkins.Users.TryGetUserId(e.Args[0].ToString(), out userId))
                     {
                         Jenkins.Insults.DelVictim(userId);
                     }
@@ -580,11 +582,10 @@ namespace DiscordBot
                     if (e.Args.Length == 0)
                     {
                         result = Jenkins.FunFacts.GetFunFact(out info);
-
                     }
                     else if (e.Args.Length == 1)
                     {
-                        if(e.Args[0].ToString().Equals("today"))
+                        if (e.Args[0].ToString().Equals("today"))
                         {
                             result = Jenkins.FunFacts.GetFunFact(out info, DateTime.Now.ToString("MM/dd"));
                         }
@@ -596,12 +597,11 @@ namespace DiscordBot
                     else if (e.Args.Length == 2)
                     {
                         result = Jenkins.FunFacts.GetFunFact(out info, e.Args[0], e.Args[1]);
-
                     }
                     await e.Channel.SendMessage(info + "\r\n" + result);
                 });
 
-            #endregion FunFacts 
+            #endregion FunFacts
 
             #region Twitch
 
@@ -1101,7 +1101,7 @@ namespace DiscordBot
 
                     await e.Message.Delete();
                     ulong userId = 0;
-                    if (Jenkins.Users.GetIDofUser(e.Args[0].ToString(), out userId))
+                    if (Jenkins.Users.TryGetUserId(e.Args[0].ToString(), out userId))
                     {
                         Jenkins.Users.PromoteToAdmin(userId, e.Message.Server.Id);
                     }
@@ -1122,7 +1122,7 @@ namespace DiscordBot
 
                     await e.Message.Delete();
                     ulong userId;
-                    if (Jenkins.Users.GetIDofUser(e.Args[0].ToString(), out userId))
+                    if (Jenkins.Users.TryGetUserId(e.Args[0].ToString(), out userId))
                     {
                         Jenkins.Users.DegradeToUser(userId, e.Server.Id);
                     }
@@ -1692,6 +1692,8 @@ namespace DiscordBot
 
             #endregion Runtime
         }
+
+        #endregion Bot
 
         #region Methods
 

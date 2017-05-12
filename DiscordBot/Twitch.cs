@@ -10,22 +10,35 @@ namespace DiscordBot
 {
     internal class Twitch
     {
-        private System.Timers.Timer streamCheck; 
+        #region Variables
+
+        private System.Timers.Timer streamCheck;
+
+        #endregion Variables
+
+        #region Init
+
         public void Init()
         {
             streamCheck = new System.Timers.Timer((Bot.Config.TwitchCheckInterval * 1000));
             streamCheck.Elapsed += StreamCheck_Elapsed;
             streamCheck.Start();
         }
-        
+
+        #endregion Init
+
+        #region Events
+
         private void StreamCheck_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
             CheckForStartedStreams();
         }
 
+        #endregion Events
+
         #region Twitch
 
-        #region Essential Commands
+        #region Commands
 
         public void RegisterTwitchChannel(string name, Channel channel = null)
         {
@@ -49,81 +62,6 @@ namespace DiscordBot
                 }
             }
         }
-
-        private void CheckForStartedStreams()
-        {
-            if (!Bot.Config.ParseSuccessfull)
-            {
-                return;
-            }
-            string[] twitchChannels = Jenkins.Twitch.GetGlobalObservingTwitchChannels();
-
-            Dictionary<ulong, string> broadcastList = new Dictionary<ulong, string>();
-            foreach (var twitchChannel in twitchChannels)
-            {
-                string request = "";
-                ulong[] discordChannelsToBroadcast = Jenkins.Twitch.GetFollowingDiscordChannelsForTwitchChannel(twitchChannel);
-
-                if (discordChannelsToBroadcast.Length == 0 && false) // ToDo Exception #1
-                {
-                    Bot.NotifyDevs("Incontinence in database for Twitch-Channel **" + twitchChannel + "**");
-                    return;
-                }
-
-                request = string.Format("https://api.twitch.tv/kraken/streams/{0}?client_id={1}"
-               , twitchChannel
-               , Bot.Config.TwitchAPIKey);
-                try
-                {
-                    using (var client = new HttpClient())
-                    {
-                        var response = client.GetStringAsync(request);
-                        response.Wait();
-                        var requestObject = JObject.Parse(response.Result);
-                        var streamString = requestObject.GetValue("stream").ToString();
-                        if ((streamString != null && streamString != string.Empty))
-                        {
-                            var streamObject = JObject.Parse(streamString);
-                            ulong streamId = ulong.Parse(streamObject.GetValue("_id").ToString());
-                            if (Jenkins.Twitch.IsStreamNotPosted(streamId))
-                            {
-                                var channelString = streamObject.GetValue("channel").ToString();
-                                var channelObject = JObject.Parse(channelString);
-                                Jenkins.Twitch.AddStream(streamObject, channelObject);
-                                string broadcast = Supporter.BuildStreamBroadcast(Jenkins.Twitch.GetStream(streamId));
-                                foreach (var discordChannel in discordChannelsToBroadcast)
-                                {
-                                    broadcastList.Add(discordChannel, broadcast);
-                                }
-                            }
-                        }
-                    }
-                }
-                catch (Exception e)
-                {
-                    Bot.NotifyDevs(Supporter.BuildExceptionMessage(e, "CheckForStartedStreams()", request));
-                }
-            }
-            BroadcastStreamUpdates(broadcastList);
-        }
-
-        private async void BroadcastStreamUpdates(Dictionary<ulong, string> broadcasts)
-        {
-            foreach (var broadcast in broadcasts)
-            {
-                try
-                {
-                    Channel channelToPost = Bot.Client.GetChannel(broadcast.Key);
-                    await channelToPost.SendMessage(broadcast.Value);
-                }
-                catch (Exception e)
-                {
-                    Bot.NotifyDevs(Supporter.BuildExceptionMessage(e, "BroadcastStreamUpdates\r\nInconsistence for parametred channelId", new object[] { broadcast.Key }));
-                }
-            }
-        }
-
-        #endregion 
 
         public string[] GetGlobalObservingTwitchChannels() // For broadcast or Admin-View
         {
@@ -199,14 +137,6 @@ namespace DiscordBot
             Jenkins.Write();
         }
 
-        public bool IsTwitchChannelRegiseredByObject(JObject channelObject)
-        {
-            int id = int.Parse(channelObject.GetValue("_id").ToString());
-            string name = channelObject.GetValue("display_name").ToString();
-            var twitchChannel = Jenkins.Database.Tables["TWITCHCHANNELS"].Rows.Find(id);
-            return (twitchChannel != null);
-        }
-
         public bool IsTwitchChannelRegiseredByName(string channelName)
         {
             var twitchChannels = Jenkins.Database.Tables["TWITCHCHANNELS"].AsEnumerable();
@@ -221,15 +151,6 @@ namespace DiscordBot
                 .Where(r => r.Field<int>("TWITCHCHANNELID").Equals(GetTwitchChannelIdByName(twitchChannelName)));
 
             return (discordChannel.Count() == 1);
-        }
-
-        private static int GetTwitchChannelIdByName(string twitchChannelName)
-        {
-            var twitchChannels = Jenkins.Database.Tables["TWITCHCHANNELS"].AsEnumerable();
-            var twitchChannel = twitchChannels.Where(r => r.Field<string>("NAME").Equals(twitchChannelName));
-            var twitchChannelId = twitchChannel.FirstOrDefault().Field<int>("ID"); // Know error while deleting a
-
-            return twitchChannelId;
         }
 
         public void AddTwitchChannel(JObject channelObject)
@@ -285,6 +206,94 @@ namespace DiscordBot
                 .Where(r => r.Field<ulong>("ID").Equals(streamId)).First();
             return stream;
         }
+
+        #endregion Commands
+
+        #region Methods
+
+        private void CheckForStartedStreams()
+        {
+            if (!Bot.Config.ParseSuccessfull)
+            {
+                return;
+            }
+            string[] twitchChannels = Jenkins.Twitch.GetGlobalObservingTwitchChannels();
+
+            Dictionary<ulong, string> broadcastList = new Dictionary<ulong, string>();
+            foreach (var twitchChannel in twitchChannels)
+            {
+                string request = "";
+                ulong[] discordChannelsToBroadcast = Jenkins.Twitch.GetFollowingDiscordChannelsForTwitchChannel(twitchChannel);
+
+                if (discordChannelsToBroadcast.Length == 0 && false) // ToDo Exception #1
+                {
+                    Bot.NotifyDevs("Incontinence in database for Twitch-Channel **" + twitchChannel + "**");
+                    return;
+                }
+
+                request = string.Format("https://api.twitch.tv/kraken/streams/{0}?client_id={1}"
+               , twitchChannel
+               , Bot.Config.TwitchAPIKey);
+                try
+                {
+                    using (var client = new HttpClient())
+                    {
+                        var response = client.GetStringAsync(request);
+                        response.Wait();
+                        var requestObject = JObject.Parse(response.Result);
+                        var streamString = requestObject.GetValue("stream").ToString();
+                        if ((streamString != null && streamString != string.Empty))
+                        {
+                            var streamObject = JObject.Parse(streamString);
+                            ulong streamId = ulong.Parse(streamObject.GetValue("_id").ToString());
+                            if (Jenkins.Twitch.IsStreamNotPosted(streamId))
+                            {
+                                var channelString = streamObject.GetValue("channel").ToString();
+                                var channelObject = JObject.Parse(channelString);
+                                Jenkins.Twitch.AddStream(streamObject, channelObject);
+                                string broadcast = Supporter.BuildStreamBroadcast(Jenkins.Twitch.GetStream(streamId));
+                                foreach (var discordChannel in discordChannelsToBroadcast)
+                                {
+                                    broadcastList.Add(discordChannel, broadcast);
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Bot.NotifyDevs(Supporter.BuildExceptionMessage(e, "CheckForStartedStreams()", request));
+                }
+            }
+            BroadcastStreamUpdates(broadcastList);
+        }
+
+        private async void BroadcastStreamUpdates(Dictionary<ulong, string> broadcasts)
+        {
+            foreach (var broadcast in broadcasts)
+            {
+                try
+                {
+                    Channel channelToPost = Bot.Client.GetChannel(broadcast.Key);
+                    await channelToPost.SendMessage(broadcast.Value);
+                }
+                catch (Exception e)
+                {
+                    Bot.NotifyDevs(Supporter.BuildExceptionMessage(e, "BroadcastStreamUpdates\r\nInconsistence for parametred channelId", new object[] { broadcast.Key }));
+                }
+            }
+        }
+
+        private static int GetTwitchChannelIdByName(string twitchChannelName)
+        {
+            var twitchChannels = Jenkins.Database.Tables["TWITCHCHANNELS"].AsEnumerable();
+            var twitchChannel = twitchChannels.Where(r => r.Field<string>("NAME").Equals(twitchChannelName));
+            var twitchChannelId = twitchChannel.FirstOrDefault().Field<int>("ID"); // Know error while deleting a
+
+            return twitchChannelId;
+        }
+
+        #endregion Methods
 
         #endregion Twitch
     }

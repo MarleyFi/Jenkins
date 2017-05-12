@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
 using Discord;
 using Newtonsoft.Json.Linq;
 
@@ -45,7 +42,7 @@ namespace DiscordBot
                     var requestObject = Newtonsoft.Json.Linq.JObject.Parse(response);
                     var dataString = requestObject.GetValue("data").ToString();
                     JArray dataObject = Newtonsoft.Json.Linq.JArray.Parse(dataString);
-                    if(dataObject.Count == 0)
+                    if (dataObject.Count == 0)
                     {
                         await channel.SendMessage(string.Format("There are no results for **{0}** :("
                                                     , keyword));
@@ -66,7 +63,6 @@ namespace DiscordBot
                 {
                     if (e.Message.Equals("Sequence contains no elements") || e.Message.Equals("Die Sequenz enthält keine Elemente") || e.Data.ToString() == "System.Collections.ListDictionaryInternal")
                     {
-                        
                         return;
                     }
                     Bot.NotifyDevs(Supporter.BuildExceptionMessage(e, "GetGIF()", keyword));

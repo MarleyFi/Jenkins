@@ -20,7 +20,6 @@ namespace DiscordBot
                 DiscordBotLog.WriteSingleLog(DiscordBotLog.BuildErrorMessage(ex), "error.txt");
                 Bot.Client.Disconnect();
             }
-            
         }
     }
 }

@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Discord;
 
 namespace DiscordBot
@@ -37,7 +35,7 @@ namespace DiscordBot
         public static void AddServer(string name)
         {
             Server server;
-            if(TryGetServerByName(name, out server))
+            if (TryGetServerByName(name, out server))
             {
                 Jenkins.Database.Tables["OBSERVE"].Rows.Add(server.Id, server.Name);
                 Jenkins.Write();
@@ -87,6 +85,7 @@ namespace DiscordBot
             server = Bot.Client.Servers.Where(r => r.Name.ToLower().Contains(name.ToLower())).First();
             return (server != null);
         }
+
         #endregion Methods
     }
 }

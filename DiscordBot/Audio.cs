@@ -42,7 +42,6 @@ namespace DiscordBot
             {
                 Bot.NotifyDevs(Supporter.BuildExceptionMessage(e));
             }
-
         }
 
         private async static void DownloadAudio(string URL)
@@ -77,7 +76,6 @@ namespace DiscordBot
                 Bot.NotifyDevs(Supporter.BuildExceptionMessage(e, "DownloadAudio()", URL));
                 await MediaMessage.Edit("Failed downloading audio");
             }
-
         }
 
         /// <summary>

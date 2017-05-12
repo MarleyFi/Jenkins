@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DiscordBot
 {
@@ -48,7 +46,7 @@ namespace DiscordBot
 
         public static string GetMemePath(string name)
         {
-            if(availabeMemes.Contains(name.ToLower()))
+            if (availabeMemes.Contains(name.ToLower()))
             {
                 return memePaths[availabeMemes.IndexOf(name.ToLower())];
             }
