@@ -17,12 +17,14 @@ namespace DiscordBot
             Jenkins.Write();
         }
 
-        public string GetWebsite(string[] tags)
+        public string GetWebsite(string[] tags, string explicitTag = "")
         {
-
             var websites = Jenkins.Database.Tables["WEBSITES"].AsEnumerable();
             var foundWebsites = websites;
-            System.Text.RegularExpressions.Regex regEx = new System.Text.RegularExpressions.Regex(@"\\");
+            if (!explicitTag.Equals(string.Empty))
+            {
+                foundWebsites = websites.Where(r => r.Field<string>("TAGS").Contains(explicitTag.ToLower()));
+            }
             foreach (var tag in tags)
             {
                 foundWebsites = foundWebsites.Where(ws => ExtractTagsToList(ws.Field<string>("TAGS")).AsEnumerable().Any(tg => new Regex(@"/*" + tag + @"*").IsMatch(tg))); // ||
@@ -33,13 +35,7 @@ namespace DiscordBot
 
             if (foundWebsites.Count() >= 1)
             {
-                string answer = "";
-                var website = foundWebsites.First();
-                if (website.Field<string>("TAGS").Count() >= 1)
-                {
-                    answer = ConcatTagsForUsers(website.Field<string>("TAGS") + "\r\n");
-                }
-                return answer + website.Field<string>("URL");
+                return GetWebsiteString(foundWebsites.ElementAt(new Random().Next(foundWebsites.Count())));
             }
             else
             {
@@ -50,24 +46,34 @@ namespace DiscordBot
                     return websites.First().Field<string>("URL");
                 }
             }
-            return "Not website found for **" + ConvertTagsForDatabase(tags, false) + "**";
+            return "No website found for " + ConcatTagsForUsers(string.Join(",", tags.Select(s => s.Trim())));
         }
 
-        public string GetRandomWebsite(bool nsfw = false)
+        public string GetWebsiteByUrl(string partOfURL)
+        {
+            var websites = Jenkins.Database.Tables["WEBSITES"].AsEnumerable().Where(website => website.Field<string>("URL").ToLower().Contains(partOfURL.ToLower()));
+            return websites.Count() >= 1 ? GetWebsiteString(websites.First()) : "";
+        }
+
+        public string GetRandomWebsite(string explicitTag = "", bool nsfw = false)
         {
             DataTable websitesTable = Jenkins.Database.Tables["WEBSITES"];
             var websites = websitesTable.AsEnumerable();
             websites = websites.Where(r => r.Field<bool>("NSFW").Equals(nsfw));
-            Random rnd = new Random();
-            string answer = "";
-            var website = websites.ElementAt(rnd.Next(0, websites.Count()));
-            if (website.Field<string>("TAGS").Count() >= 1)
-            {
-                answer = ConcatTagsForUsers(website.Field<string>("TAGS") + "\r\n");
-            }
-            return answer + website.Field<string>("URL");
-        }
 
+            if (!explicitTag.Equals(string.Empty))
+            {
+                if(explicitTag.ToLower().Equals("pr0"))
+                {
+                    websites = websites.Where(r => r.Field<string>("URL").ToLower().Contains("pr0gramm.com"));
+                }
+                else
+                {
+                    websites = websites.Where(r => r.Field<string>("TAGS").Contains(explicitTag.ToLower()));
+                }
+            }
+            return GetWebsiteString(websites.ElementAt(new Random().Next(websites.Count())));
+        }
 
         public string ListWebsites()
         {
@@ -84,7 +90,17 @@ namespace DiscordBot
                 Jenkins.Write();
                 return "`" + websites.First().Field<string>("URL") + "` was deleted";
             }
-            return "Not website found for **" + keyword + "**";
+            return "No website found for **" + keyword + "**";
+        }
+
+        private string GetWebsiteString(DataRow website)
+        {
+            string answer = "";
+            if (!website.Field<string>("TAGS").Contains("website") && website.Field<string>("TAGS").Count() >= 1)
+            {
+                answer = ConcatTagsForUsers(website.Field<string>("TAGS") + "\r\n");
+            }
+            return answer + website.Field<string>("URL");
         }
 
         private string ConcatTagsForUsers(string tags)
@@ -96,6 +112,7 @@ namespace DiscordBot
             }
             return sb.ToString();
         }
+
 
         public string ConvertTagsForDatabase(string[] tags, bool skipFirst = true)
         {

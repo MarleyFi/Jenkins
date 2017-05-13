@@ -286,25 +286,41 @@ namespace DiscordBot
                 .Do(async (e) =>
                 {
                     await e.Message.Delete();
-                    if(e.Args[0] != string.Empty)
+                    if (e.Args[0] != string.Empty)
                     {
-                        await e.Channel.SendMessage(Jenkins.Websites.GetWebsite(Jenkins.Websites.ExtractTagsToList(e.Args[0])));
+                        await e.Channel.SendMessage(Jenkins.Websites.GetWebsite(Jenkins.Websites.ExtractTagsToList(e.Args[0]), e.Command.Text.ToLower().Equals("website") ? "website" : ""));
                     }
                     else
                     {
-                        await e.Channel.SendMessage(Jenkins.Websites.GetRandomWebsite());
+                        await e.Channel.SendMessage(Jenkins.Websites.GetRandomWebsite(e.Message.Text.ToLower().Replace("/","")));
                     }
-                    
+
+                });
+
+            command.CreateCommand("websites")
+                .Description("A list of all my websites")
+                .Parameter("tags", ParameterType.Unparsed)
+                .Do(async (e) =>
+                {
+                    await e.Message.Delete();
+                    await e.Channel.SendMessage(Jenkins.Websites.ListWebsites());
                 });
 
             command.CreateCommand("addWebsite")
                 .Description("Adds a website append tags with commas like nsfw or just names")
                 .Parameter("tags", ParameterType.Multiple)
-                .Alias(new string[] { "addwebsite", "aw"})
+                .Alias(new string[] { "addwebsite", "aw" })
                 .Do(async (e) =>
                 {
                     await e.Message.Delete();
-                    Jenkins.Websites.AddWebsite(e.Args[0].ToString(), Jenkins.Websites.ConvertTagsForDatabase(e.Args));
+                    string ws = Jenkins.Websites.GetWebsiteByUrl(e.Args[0]);
+                    if (ws == string.Empty)
+                    {
+                        Jenkins.Websites.AddWebsite(e.Args[0].ToString(), Jenkins.Websites.ConvertTagsForDatabase(e.Args));
+                        await e.User.SendMessage("Added `"+ e.Args[0]+"`");
+                        return;
+                    }
+                    await e.User.SendMessage("URL is already here: \r\n"+ ws);
                 });
 
             command.CreateCommand("delWebsite")
@@ -317,7 +333,7 @@ namespace DiscordBot
                     if (!Jenkins.Users.IsUserDev(e.Message.User.Id))
                         return;
 
-                        await e.Message.Delete();
+                    await e.Message.Delete();
                     await e.Channel.SendMessage(Jenkins.Websites.DelWebsite(e.Args[0].ToString()));
                 });
 
