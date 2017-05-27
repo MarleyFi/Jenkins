@@ -73,6 +73,8 @@ namespace DiscordBot
 
         public bool GamesSyncEnabled { get; set; }
 
+        public bool GamesSyncNotifyUsers { get; set; }
+
         public bool DailyVote { get; set; }
 
         public string DailyVoteStart { get; set; }
@@ -132,6 +134,7 @@ namespace DiscordBot
                 this.CleverbotNick = parsedData[General]["CleverbotNick"];
                 this.CleverbotEnabled = bool.Parse(parsedData[General]["CleverbotEnabled"]);
                 this.GamesSyncEnabled = bool.Parse(parsedData[General]["GamesSyncEnabled"]);
+                this.GamesSyncNotifyUsers = bool.Parse(parsedData[General]["GamesSyncNotifyUsers"]);
                 this.DailyVote = bool.Parse(parsedData[General]["DailyVote"]);
                 this.DailyVoteStart = parsedData[General]["DailyVoteStart"];
                 this.DailyVoteEnd = parsedData[General]["DailyVoteEnd"];
@@ -172,6 +175,7 @@ namespace DiscordBot
                 this.CleverbotNick = "JenkinsBOT";
                 this.CleverbotEnabled = false;
                 this.GamesSyncEnabled = false;
+                this.GamesSyncNotifyUsers = false;
                 this.DailyVote = false;
                 this.DailyVoteStart = "00:00:00";
                 this.DailyVoteEnd = "00:01:00";

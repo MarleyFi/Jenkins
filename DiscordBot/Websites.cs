@@ -27,7 +27,7 @@ namespace DiscordBot
             }
             foreach (var tag in tags)
             {
-                foundWebsites = foundWebsites.Where(ws => ExtractTagsToList(ws.Field<string>("TAGS")).AsEnumerable().Any(tg => new Regex(@"/*" + tag + @"*").IsMatch(tg))); // ||
+                foundWebsites = foundWebsites.Where(ws => ExtractTagsToList(ws.Field<string>("TAGS")).AsEnumerable().Any(tg => new Regex(@"/*" + tag.Trim() + @"*").IsMatch(tg))); // ||
                 //ExtractTagsToList(ws.Field<string>("TAGS")).AsEnumerable().Contains(tag) ||
                 //ExtractTagsToList(ws.Field<string>("TAGS")).AsEnumerable().Any(tg => tg.StartsWith(tag)) ||
                 //ExtractTagsToList(ws.Field<string>("TAGS")).AsEnumerable().Any(tg => tg.EndsWith(tag)));

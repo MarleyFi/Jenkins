@@ -113,7 +113,7 @@ namespace DiscordBot
             return GetAvailableGames();
         }
 
-        private void CheckForNewServerroles(Server server, string[] currentGames)
+        private async void CheckForNewServerroles(Server server, string[] currentGames)
         {
             var duplicateGames = currentGames.GroupBy(x => x)
                         .Where(group => group.Count() > 1)
@@ -121,15 +121,35 @@ namespace DiscordBot
 
             foreach (var game in duplicateGames)
             {
+                
                 if (server.FindRoles(game, true).Count() == 0)
                 {
+                    await server.CreateRole(game, null, Supporter.GetRandomColor(), false, true);
                     Bot.NotifyDevs("Created Role **" + game + "** in Server **" + server.Name + "**");
-                    server.CreateRole(game, null, Supporter.GetRandomColor(), false, true);
+                    
+                }
+                IEnumerable<Role> roles = server.FindRoles(game, true);
+                if (server.FindChannels(game.Replace(" ", "-").Replace(":", "").ToLower(), ChannelType.Text, true).Count() == 0 && roles.Count() == 1)
+                {
+                    await CreateGameChannel(server, game, roles.First());
                 }
             }
         }
 
-        private void CompareRolesForUserAndAssign(User user, string[] games)
+        private static async System.Threading.Tasks.Task CreateGameChannel(Server server, string game, Role role)
+        {
+            var tChannel = await server.CreateChannel(game.Replace(" ", "-").Replace(":", "").ToLower(), ChannelType.Text);
+            await tChannel.Edit(tChannel.Name, "Everyone who got @" + game);
+            //var permissons = server.FindChannels("grand Theft Auto V", ChannelType.Text).First().PermissionOverwrites;
+            await tChannel.AddPermissionsRule(server.EveryoneRole, new ChannelPermissions(0), new ChannelPermissions(523328));
+            await tChannel.AddPermissionsRule(role, new ChannelPermissions(384064), new ChannelPermissions(8192));
+            //await tChannel.AddPermissionsRule(server.EveryoneRole, new ChannelPermissions(0), new ChannelPermissions(false, false, false, false, false, false, false, false, false, false));
+            //await tChannel.AddPermissionsRule(role, new ChannelPermissions(true, false, true, true, true, false, true, true, true), new ChannelPermissions(0));
+            //await tChannel.SendMessage("Created this channel because 2+ users are playing **" + game + "**");
+            Bot.NotifyDevs("Created channel **#" + tChannel.Name + "** in server **" + server.Name + "**");
+        }
+
+        private async void CompareRolesForUserAndAssign(User user, string[] games)
         {
             string currentGame = user.CurrentGame.Value.Name;
             if (games.Contains(currentGame))
@@ -140,6 +160,10 @@ namespace DiscordBot
                     // Role in server and user does not have it
                     // user.AddRoles(new Role[] { gameRole.First() });
                     TryAssignRoleToUser(user, gameRoles.First());
+                    if (user.Server.FindChannels(currentGame.Replace(" ", "-").Replace(":", "").ToLower(), ChannelType.Text, true).Count() == 0)
+                    {
+                        await CreateGameChannel(user.Server, currentGame, gameRoles.First());
+                    }
                 }
                 else
                 {
@@ -158,6 +182,16 @@ namespace DiscordBot
             {
                 user.AddRoles(new Role[] { role });
                 Bot.NotifyDevs("Added Role **" + role.Name + "** to user **" + user.Name + "** on server **" + user.Server.Name + "**");
+                try
+                {
+                    if (Bot.Config.GamesSyncNotifyUsers)
+                        Bot.SendMessage("Assigned role " + role.Mention + " to ya, " + user.Mention, user.Server.DefaultChannel);
+                }
+                catch (Exception e)
+                {
+                    Bot.NotifyDevs(Supporter.BuildExceptionMessage(e, "TryAssignRoleToUser", new object[] { user.Server.Name, user.Name, role.Name }));
+                }
+
                 return true;
             }
             catch (Exception e)

@@ -140,6 +140,34 @@ namespace DiscordBot
                 }
             }
         };
+
+            Client.UserJoined += (s, e) =>
+            {
+                if (e.Server.Id != 201693574889340928)
+                    return; // Zockeria
+
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine("Willkommen auf dem Server " + e.Server.Name + ", " + e.User.Mention);
+                sb.AppendLine();
+                sb.AppendLine("Die Regeln sollten klar sein: Keine Beleidigungen, keine Werbung und weder kratzen noch treten. lul.");
+                sb.AppendLine("Alle **Admins** des Servers sind Orange gefärbt, alle Bots blau.");
+                sb.AppendLine();
+                sb.AppendLine("Noch bist **du** ein unregistrierter Parasit und hast keine Rolle/Gruppe. Wenn du das ändern möchtest und mit den Regeln einverstanden bist, schreibe mir **/accept**.");
+                sb.AppendLine();
+                sb.AppendLine("**Infos**");
+                sb.AppendLine();
+                sb.AppendLine("Ich synchronisieren all deine gespielten Spiele mit den Gruppe auf diesem Server. Das hat den Vorteil das du zB. `@Grand Theft Auto V` in den Chat schreiben kannst, fragen wer bock hat und alle die dieses Spiel ebenfalls besitzt werden im gleichen zuge benachrichtigt.");
+                sb.AppendLine();
+                sb.AppendLine("**Commands**");
+                sb.AppendLine();
+                sb.AppendLine("**/stats** Deine stats");
+                sb.AppendLine("**/funFact** Ein random FunFact");
+                sb.AppendLine("**/rgif** Ein random GIF");
+                sb.AppendLine();
+                sb.AppendLine("--> **/help** All meine Commands");
+                e.User.SendMessage(sb.ToString());
+            };
+
             Client.Ready += (s, e) =>
             {
                 Jenkins.GamesSync.Init();
@@ -148,6 +176,36 @@ namespace DiscordBot
             #endregion Events
 
             #region Commands
+
+            #region Accept
+
+            command.CreateCommand("accept")
+                .Description("ACCEPT")
+                .Hide()
+                .Do(async (e) =>
+                {
+                    try
+                    {
+                        var server = Client.GetServer(201693574889340928);
+                        var user = server.FindUsers(e.User.Name).First();
+                        var memberRole = server.Roles.Where(role => role.Name.Equals("Member")).First();
+                        if (!user.HasRole(memberRole))
+                        {
+                            await user.AddRoles(memberRole);
+                            await server.DefaultChannel.SendMessage("Willkommen " + e.User.Mention + " in " + server.Name + "!");
+                        }
+                        else
+                        {
+                            await e.User.SendMessage("Du bist bereits auf dem Server " + server.Name + " registriert.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        NotifyDevs(Supporter.BuildExceptionMessage(ex, "Accept"));
+                    }
+                });
+
+            #endregion Accept
 
             #region General
 
@@ -288,11 +346,11 @@ namespace DiscordBot
                     await e.Message.Delete();
                     if (e.Args[0] != string.Empty)
                     {
-                        await e.Channel.SendMessage(Jenkins.Websites.GetWebsite(Jenkins.Websites.ExtractTagsToList(e.Args[0]), e.Command.Text.ToLower().Equals("website") ? "website" : ""));
+                        await e.Channel.SendMessage(Jenkins.Websites.GetWebsite(Jenkins.Websites.ExtractTagsToList(e.Args[0]), e.Message.Text.ToLower().Equals("website") ? "website" : ""));
                     }
                     else
                     {
-                        await e.Channel.SendMessage(Jenkins.Websites.GetRandomWebsite(e.Message.Text.ToLower().Replace("/","")));
+                        await e.Channel.SendMessage(Jenkins.Websites.GetRandomWebsite(e.Message.Text.ToLower().Replace("/", "")));
                     }
 
                 });
@@ -317,10 +375,10 @@ namespace DiscordBot
                     if (ws == string.Empty)
                     {
                         Jenkins.Websites.AddWebsite(e.Args[0].ToString(), Jenkins.Websites.ConvertTagsForDatabase(e.Args));
-                        await e.User.SendMessage("Added `"+ e.Args[0]+"`");
+                        await e.User.SendMessage("Added `" + e.Args[0] + "`");
                         return;
                     }
-                    await e.User.SendMessage("URL is already here: \r\n"+ ws);
+                    await e.User.SendMessage("URL is already here: \r\n" + ws);
                 });
 
             command.CreateCommand("delWebsite")
@@ -1702,6 +1760,19 @@ namespace DiscordBot
                                 await e.Message.Delete();
                                 await e.Channel.SendMessage(Supporter.BuildList("All syncing servers", Jenkins.GamesSync.GetAllSyncingServerNames()));
                             });
+
+            command.CreateCommand("sync")
+                            .Description("GamesSync")
+                            .Hide()
+                            .Do((e) =>
+                            {
+                                if (!Jenkins.Users.IsUserDev(e.User.Id))
+                                {
+                                    return;
+                                }
+                                Jenkins.GamesSync.CheckServers();
+                            });
+            
 
             #endregion GamesSync
 

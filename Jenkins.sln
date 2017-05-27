@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.26430.6
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{8D7989F0-66CE-4DBB-8230-D8C811E9B1D7}"
 EndProject
@@ -29,7 +29,7 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Discord.Net.Shared", "src\D
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Discord.Net.Audio", "src\Discord.Net.Audio.Net45\Discord.Net.Audio.csproj", "{7BFEF748-B934-4621-9B11-6302E3A9F6B3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiscordBot", "DiscordBot\DiscordBot.csproj", "{F858E8DB-3C54-4798-AC5C-B2AB760E1485}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jenkins.NET", "DiscordBot\Jenkins.NET.csproj", "{F858E8DB-3C54-4798-AC5C-B2AB760E1485}"
 	ProjectSection(ProjectDependencies) = postProject
 		{7BFEF748-B934-4621-9B11-6302E3A9F6B3} = {7BFEF748-B934-4621-9B11-6302E3A9F6B3}
 		{3091164F-66AE-4543-A63D-167C1116241D} = {3091164F-66AE-4543-A63D-167C1116241D}
