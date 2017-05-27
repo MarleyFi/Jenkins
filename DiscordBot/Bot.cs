@@ -163,6 +163,7 @@ namespace DiscordBot
                 sb.AppendLine("**/stats** Deine stats");
                 sb.AppendLine("**/funFact** Ein random FunFact");
                 sb.AppendLine("**/rgif** Ein random GIF");
+                sb.AppendLine("**/website** Ein random website (meist verstörend)");
                 sb.AppendLine();
                 sb.AppendLine("--> **/help** All meine Commands");
                 e.User.SendMessage(sb.ToString());
@@ -574,6 +575,22 @@ namespace DiscordBot
 
             #region Quotes
 
+            command.CreateCommand("quotes")
+                .Description("Quotes statistics")
+                .Alias(new string[] { "qs" })
+                .Do(async (e) =>
+                {
+                    await e.Message.Delete();
+                    if (Config.TTSEnabled)
+                    {
+                        await e.Channel.SendTTSMessage(Jenkins.Quotes.GetQuoteStatistics());
+                    }
+                    else
+                    {
+                        await e.Channel.SendMessage(Jenkins.Quotes.GetQuoteStatistics());
+                    }
+                });
+
             command.CreateCommand("quote")
                 .Description("You'll get one quote of my huge collection :bookmark: ")
                 .Alias(new string[] { "q" })
@@ -656,9 +673,9 @@ namespace DiscordBot
                     }
                 });
 
-            command.CreateCommand("quotes")
+            command.CreateCommand("listQuotes")
                 .Description("Shows all quotes you've created")
-                .Alias(new string[] { "lq", "listquotes", "listQuotes" })
+                .Alias(new string[] { "lq", "listquotes" })
                 .Do(async (e) =>
                 {
                     await e.Message.Delete();

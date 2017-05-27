@@ -433,6 +433,11 @@ namespace DiscordBot
             }
         }
 
+        public static string GetPercentageString(int value, int maximum)
+        {
+            return ((Convert.ToDouble(value) / Convert.ToDouble(maximum))).ToString("P2");
+        }
+
         public static string GetDuration(this TimeSpan span)
         {
             if (span == TimeSpan.Zero) return "0 minutes";
