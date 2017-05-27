@@ -166,6 +166,7 @@ namespace DiscordBot
                 sb.AppendLine();
                 sb.AppendLine("--> **/help** All meine Commands");
                 e.User.SendMessage(sb.ToString());
+                NotifyDevs("User "+e.User.Name +" joined server **Zockeria**.\r\n"+ "Waiting for response of user /accept ...");
             };
 
             Client.Ready += (s, e) =>
@@ -193,6 +194,7 @@ namespace DiscordBot
                         {
                             await user.AddRoles(memberRole);
                             await server.DefaultChannel.SendMessage("Willkommen " + e.User.Mention + " in " + server.Name + "!");
+                            NotifyDevs("Received /accept\r\nGranted user " + e.User.Name + " permissions.");
                         }
                         else
                         {

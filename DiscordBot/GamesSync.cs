@@ -116,36 +116,33 @@ namespace DiscordBot
         private async void CheckForNewServerroles(Server server, string[] currentGames)
         {
             var duplicateGames = currentGames.GroupBy(x => x)
-                        .Where(group => group.Count() > 1)
+                        .Where(group => group.Count() > (Bot.Config.CreateNewRoleLimit - 1))
                         .Select(group => group.Key);
 
             foreach (var game in duplicateGames)
             {
-                
+
                 if (server.FindRoles(game, true).Count() == 0)
                 {
                     await server.CreateRole(game, null, Supporter.GetRandomColor(), false, true);
                     Bot.NotifyDevs("Created Role **" + game + "** in Server **" + server.Name + "**");
-                    
+
                 }
                 IEnumerable<Role> roles = server.FindRoles(game, true);
-                if (server.FindChannels(game.Replace(" ", "-").Replace(":", "").ToLower(), ChannelType.Text, true).Count() == 0 && roles.Count() == 1)
+                if (server.FindChannels(ConvertToChannelName(game), ChannelType.Text, true).Count() == 0 && roles.Count() == 1)
                 {
                     await CreateGameChannel(server, game, roles.First());
                 }
             }
         }
 
-        private static async System.Threading.Tasks.Task CreateGameChannel(Server server, string game, Role role)
+        private async System.Threading.Tasks.Task CreateGameChannel(Server server, string game, Role role)
         {
-            var tChannel = await server.CreateChannel(game.Replace(" ", "-").Replace(":", "").ToLower(), ChannelType.Text);
+            var tChannel = await server.CreateChannel(ConvertToChannelName(game), ChannelType.Text);
             await tChannel.Edit(tChannel.Name, "Everyone who got @" + game);
-            //var permissons = server.FindChannels("grand Theft Auto V", ChannelType.Text).First().PermissionOverwrites;
             await tChannel.AddPermissionsRule(server.EveryoneRole, new ChannelPermissions(0), new ChannelPermissions(523328));
             await tChannel.AddPermissionsRule(role, new ChannelPermissions(384064), new ChannelPermissions(8192));
-            //await tChannel.AddPermissionsRule(server.EveryoneRole, new ChannelPermissions(0), new ChannelPermissions(false, false, false, false, false, false, false, false, false, false));
-            //await tChannel.AddPermissionsRule(role, new ChannelPermissions(true, false, true, true, true, false, true, true, true), new ChannelPermissions(0));
-            //await tChannel.SendMessage("Created this channel because 2+ users are playing **" + game + "**");
+            await tChannel.SendMessage("Welcome " + role.Mention + " players! :video_game:");
             Bot.NotifyDevs("Created channel **#" + tChannel.Name + "** in server **" + server.Name + "**");
         }
 
@@ -160,7 +157,7 @@ namespace DiscordBot
                     // Role in server and user does not have it
                     // user.AddRoles(new Role[] { gameRole.First() });
                     TryAssignRoleToUser(user, gameRoles.First());
-                    if (user.Server.FindChannels(currentGame.Replace(" ", "-").Replace(":", "").ToLower(), ChannelType.Text, true).Count() == 0)
+                    if (user.Server.FindChannels(ConvertToChannelName(currentGame), ChannelType.Text, true).Count() == 0)
                     {
                         await CreateGameChannel(user.Server, currentGame, gameRoles.First());
                     }
@@ -185,7 +182,11 @@ namespace DiscordBot
                 try
                 {
                     if (Bot.Config.GamesSyncNotifyUsers)
-                        Bot.SendMessage("Assigned role " + role.Mention + " to ya, " + user.Mention, user.Server.DefaultChannel);
+                    {
+                        if(TryGetTextChannel(role.Name, user.Server, out var tChannel))
+                            Bot.SendMessage("Sup " + role.Mention + " player, " + user.Mention, tChannel);
+                    }
+
                 }
                 catch (Exception e)
                 {
@@ -288,6 +289,23 @@ namespace DiscordBot
             var serversTable = Jenkins.Database.Tables[TblName].AsEnumerable();
             var servers = serversTable.Where(r => r.Field<ulong>("SERVERID").Equals(serverId));
             return (servers != null && servers.Count() >= 1);
+        }
+
+        private string ConvertToChannelName(string game)
+        {
+            return game.Replace(" ", "-").Replace(":", "").ToLower();
+        }
+
+        private bool TryGetTextChannel(string name, Server server, out Channel tChannel)
+        {
+            var channels = server.FindChannels(ConvertToChannelName(name), ChannelType.Text, false);
+            if (channels.Count() >= 1)
+            {
+                tChannel = channels.First();
+                return true;
+            }
+            tChannel = null;
+            return false;
         }
 
         #endregion Methods
