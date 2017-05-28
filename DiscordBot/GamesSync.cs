@@ -138,12 +138,21 @@ namespace DiscordBot
 
         private async System.Threading.Tasks.Task CreateGameChannel(Server server, string game, Role role)
         {
-            var tChannel = await server.CreateChannel(ConvertToChannelName(game), ChannelType.Text);
-            await tChannel.Edit(tChannel.Name, "Everyone who got @" + game);
-            await tChannel.AddPermissionsRule(server.EveryoneRole, new ChannelPermissions(0), new ChannelPermissions(523328));
-            await tChannel.AddPermissionsRule(role, new ChannelPermissions(384064), new ChannelPermissions(8192));
-            await tChannel.SendMessage("Welcome " + role.Mention + " players! :video_game:");
-            Bot.NotifyDevs("Created channel **#" + tChannel.Name + "** in server **" + server.Name + "**");
+            try
+            {
+                var tChannel = await server.CreateChannel(ConvertToChannelName(game), ChannelType.Text);
+                await tChannel.Edit(tChannel.Name, "Everyone who got @" + game);
+                await tChannel.AddPermissionsRule(server.EveryoneRole, new ChannelPermissions(0), new ChannelPermissions(523328));
+                await tChannel.AddPermissionsRule(role, new ChannelPermissions(384064), new ChannelPermissions(8192));
+                await tChannel.SendMessage("Welcome " + role.Mention + " players! :video_game:");
+                Bot.NotifyDevs("Created channel **#" + tChannel.Name + "** in server **" + server.Name + "**");
+            }
+            catch (Exception e)
+            {
+                Bot.NotifyDevs(Supporter.BuildExceptionMessage(e, "CreateGameChannel"));
+            }
+            
+            
         }
 
         private async void CompareRolesForUserAndAssign(User user, string[] games)
@@ -293,7 +302,7 @@ namespace DiscordBot
 
         private string ConvertToChannelName(string game)
         {
-            return game.Replace(" ", "-").Replace(":", "").ToLower();
+            return game.Replace(" ", "-").Replace(":", "").Replace("!","").ToLower();
         }
 
         private bool TryGetTextChannel(string name, Server server, out Channel tChannel)
