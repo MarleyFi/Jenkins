@@ -128,23 +128,29 @@ namespace DiscordBot
             await voteChannel.SendMessage("--> Das Voting ist gültig bis " + nextVoteEnd.ToLongTimeString());
         }
 
-        public static int Vote(string vote, ulong userId, out string foodName)
+        public static void Vote(string vote, ulong userId, out string foodName)
         {
+            foodName = GetFoodName(vote);
             if (userVotes.Keys.Contains(userId)) // User hat bereits gevotet
             {
                 string oldVote = userVotes[userId];
+                if(oldVote.ToLower().Equals(vote.ToLower()))
+                {
+                    voteChannel.SendMessage("<@" + userId + "> deine Stimme ist bereits für **" + foodName + "** [**" + vote.ToUpper() + "**] festgelegt");
+                    return;
+                }
                 votes[oldVote] = votes[oldVote] - 1;
                 if (votes[oldVote] == 0)
                 {
                     votes.Remove(oldVote);
                 }
                 userVotes[userId] = vote.ToLower();
-                voteChannel.SendMessage("<@" + userId + "> hat seine Stimme geändert zu **" + vote.ToUpper() + "**");
+                voteChannel.SendMessage("<@" + userId + "> hat seine Stimme geändert zu **" + foodName + "** [**" + vote.ToUpper() + "**]");
             }
             else // Neuer Vote
             {
                 userVotes.Add(userId, vote.ToLower());
-                voteChannel.SendMessage("Eine neue Stimme für **" + vote.ToUpper() + "** wurde von <@" + userId + "> abgegeben");
+                voteChannel.SendMessage("Eine neue Stimme für **" + foodName+"** [**"+vote.ToUpper() + "**] wurde von <@" + userId + "> abgegeben");
             }
 
             int count = 0;
@@ -156,10 +162,6 @@ namespace DiscordBot
             {
                 votes.Add(vote.ToLower(), 1);
             }
-
-            foodName = GetFoodName(vote);
-
-            return count + 1;
         }
 
         public static string GetVotes()

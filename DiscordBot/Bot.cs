@@ -10,6 +10,7 @@ using Discord;
 using Discord.Audio;
 using Discord.Commands;
 using GoogleMaps.LocationServices;
+using System.Data;
 
 namespace DiscordBot
 {
@@ -167,7 +168,7 @@ namespace DiscordBot
                 sb.AppendLine();
                 sb.AppendLine("--> **/help** All meine Commands");
                 e.User.SendMessage(sb.ToString());
-                NotifyDevs("User "+e.User.Name +" joined server **Zockeria**.\r\n"+ "Waiting for response of user /accept ...");
+                NotifyDevs("User " + e.User.Name + " joined server **Zockeria**.\r\n" + "Waiting for response of user /accept ...");
             };
 
             Client.Ready += (s, e) =>
@@ -632,6 +633,38 @@ namespace DiscordBot
                     }
                 });
 
+            command.CreateCommand("quotesOf")
+                .Description("I'll search for all quotes of the owner you prefer")
+                .Alias(new string[] { "qso", "quotesof" })
+                .Parameter("name", ParameterType.Unparsed)
+                .Do(async (e) =>
+                {
+                    await e.Message.Delete();
+                    DataRow[] quotes = Jenkins.Quotes.GetQuotesOf(e.Args[0].ToString());
+                    if (quotes.Length >= 1)
+                    {
+                        StringBuilder sb = new StringBuilder();
+                        int internalCounter = 0;
+                        for (int i = 0; i < quotes.Length; i++)
+                        {
+                            sb.AppendFormat((i + 1).ToString() + ". " + Supporter.BuildQuote(quotes[i]["MESSAGE"].ToString(), quotes[i]["OWNER"].ToString()));
+                            sb.AppendLine();
+                            sb.AppendLine();
+                            internalCounter++;
+                            if (internalCounter == 3 || i == (quotes.Length - 1))
+                            {
+                                await e.Channel.SendMessage(sb.ToString());
+                                internalCounter = 0;
+                                sb.Clear();
+                            }
+                        }
+                    }
+                    else
+                    {
+                        await e.User.SendMessage(string.Format("I'm sorry but theres no quote matching your search for **{0}** :(", e.Args[0].ToString()));
+                    }
+                });
+
             command.CreateCommand("addQuote")
                 .Alias(new string[] { "aq", "addquote" })
                 .Description("Adds your super fancy quote to my vocabulary")
@@ -649,7 +682,7 @@ namespace DiscordBot
             command.CreateCommand("findQuote")
                 .Alias(new string[] { "fq", "findquote" })
                 .Description("I'll search for a quote on your order, Sir!")
-                .Parameter("text", ParameterType.Required)
+                .Parameter("text", ParameterType.Unparsed)
                 .Do(async (e) =>
                 {
                     await e.Message.Delete();
@@ -1559,7 +1592,7 @@ namespace DiscordBot
                                         return;
                                     }
                                     string foodName;
-                                    int count = Food.Vote(e.Args[0], e.Message.User.Id, out foodName);
+                                    Food.Vote(e.Args[0], e.Message.User.Id, out foodName);
                                 }
                                 else
                                 {
@@ -1791,7 +1824,7 @@ namespace DiscordBot
                                 }
                                 Jenkins.GamesSync.CheckServers();
                             });
-            
+
 
             #endregion GamesSync
 

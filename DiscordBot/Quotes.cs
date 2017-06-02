@@ -45,6 +45,14 @@ namespace DiscordBot
             return Supporter.BuildQuote(quote["MESSAGE"].ToString(), quote["OWNER"].ToString());
         }
 
+        public DataRow[] GetQuotesOf(string owner)
+        {
+            DataTable quotesTable = Jenkins.Database.Tables["QUOTES"];
+            var quotes = quotesTable.AsEnumerable();
+            quotes = quotes.Where(r => r.Field<string>("OWNER").ToLower().Contains(owner.ToLower()));
+            return quotes.ToArray<DataRow>();
+        }
+
         public string ListQuotes(User user, ulong serverId)
         {
             DataTable quotesTable = Jenkins.Database.Tables["QUOTES"];
