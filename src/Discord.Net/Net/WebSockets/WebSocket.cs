@@ -126,7 +126,7 @@ namespace Discord.Net.WebSockets
             {
                 var ex = _taskManager.Exception;
                 if (ex == null)
-                    Logger.Info("Disconnected");
+                    Logger.Info("Disconnected " +ex.Message.ToString(), ex);
                 else
                     Logger.Error("Disconnected", ex);
                 State = ConnectionState.Disconnected;

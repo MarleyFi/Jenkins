@@ -302,7 +302,7 @@ namespace DiscordBot
 
         private string ConvertToChannelName(string game)
         {
-            return game.Replace(" ", "-").Replace(":", "").Replace("!","").ToLower();
+            return game.Replace(" ", "-").Replace(":", "").Replace("!","").Replace("'", "").ToLower().Replace("(", "").ToLower().Replace(")", "").ToLower();
         }
 
         private bool TryGetTextChannel(string name, Server server, out Channel tChannel)

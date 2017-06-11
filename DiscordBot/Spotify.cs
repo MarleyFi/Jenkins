@@ -8,9 +8,6 @@ using SpotifyAPI.Web.Auth;
 using SpotifyAPI.Web.Enums;
 using SpotifyAPI.Web.Models;
 
-using System;
-using System.Linq;
-
 namespace DiscordBot
 {
     internal static class Spotify // fkin' Spotify lul
