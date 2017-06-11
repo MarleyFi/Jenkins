@@ -21,7 +21,7 @@ namespace DiscordBot
         public static Configuration Config; // Config (lol)
         public static DiscordClient Client; // Jenkins
 
-        private CommandService command;
+        public static CommandService Command;
 
         #endregion Internal Variables
 
@@ -57,7 +57,7 @@ namespace DiscordBot
                 x.Mode = AudioMode.Outgoing;
             });
 
-            command = Client.GetService<CommandService>();
+            Command = Client.GetService<CommandService>();
 
             #endregion Init
 
@@ -182,7 +182,7 @@ namespace DiscordBot
 
             #region Accept
 
-            command.CreateCommand("accept")
+            Command.CreateCommand("accept")
                 .Description("ACCEPT")
                 .Hide()
                 .Do(async (e) =>
@@ -213,7 +213,7 @@ namespace DiscordBot
 
             #region General
 
-            command.CreateCommand("help")
+            Command.CreateCommand("help")
         .Alias(new string[] { "commands", "cmds", "?" })
         .Description("Helping things and stuff :question:")
         .Do(async (e) =>
@@ -222,7 +222,7 @@ namespace DiscordBot
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("Hello, my name is **Jenkins**!");
             sb.AppendLine();
-            foreach (var cmd in command.AllCommands)
+            foreach (var cmd in Command.AllCommands)
             {
                 if (!cmd.IsHidden || Jenkins.Users.IsUserDev(e.User.Id))
                 {
@@ -270,7 +270,7 @@ namespace DiscordBot
             await e.Channel.SendMessage(sb.ToString());
         });
 
-            command.CreateCommand("weather")
+            Command.CreateCommand("weather")
                 .Description("Guess it... :white_sun_cloud:")
                 .Do(async (e) =>
                 {
@@ -283,7 +283,7 @@ namespace DiscordBot
                     await msg.Edit(BuildForecast(currentWeather));
                 });
 
-            command.CreateCommand("dice")
+            Command.CreateCommand("dice")
                 .Description("I'll roll a dice for you, Sir! :game_die:")
                 .Do(async (e) =>
                 {
@@ -291,14 +291,14 @@ namespace DiscordBot
                     await e.Message.Channel.SendMessage(Supporter.RollDice());
                 });
 
-            command.CreateCommand("ping")
+            Command.CreateCommand("ping")
                 .Description("For really important connection-Tests and stuff")
                 .Do(async (e) =>
                 {
                     await e.Channel.SendMessage("Pong! - Jenkins.NET");
                 });
 
-            command.CreateCommand("shortURL")
+            Command.CreateCommand("shortURL")
                 .Description("I'll shorten a URL for you :pen_ballpoint:")
                 .Parameter("url", ParameterType.Required)
                 .Alias(new string[] { "shorturl", "shortUrl", "url", "URL" })
@@ -309,7 +309,7 @@ namespace DiscordBot
                     await e.Channel.SendMessage(Google.GetShortenURL(e.Args[0].ToString()));
                 });
 
-            command.CreateCommand("memes")
+            Command.CreateCommand("memes")
                 .Description("All memes I'm holding for ya :tophat:")
                 .Alias(new string[] { "shorturl", "shortUrl", "url", "URL" })
                 .Do(async (e) =>
@@ -320,7 +320,7 @@ namespace DiscordBot
                     await e.Message.User.SendMessage(Supporter.BuildList("Memes", Memes.GetMemes()));
                 });
 
-            command.CreateCommand("meme")
+            Command.CreateCommand("meme")
                 .Description("Post a certain meme")
                 .Parameter("name", ParameterType.Required)
                 .Alias(new string[] { "pic", "post", "send", "react" })
@@ -341,7 +341,7 @@ namespace DiscordBot
                     }
                 });
 
-            command.CreateCommand("website")
+            Command.CreateCommand("website")
                 .Description("Try it!")
                 .Parameter("tags", ParameterType.Unparsed)
                 .Alias(new string[] { "pr0", "useless", "lol", "web", "browser", "internet" })
@@ -359,7 +359,7 @@ namespace DiscordBot
 
                 });
 
-            command.CreateCommand("websites")
+            Command.CreateCommand("websites")
                 .Description("A list of all my websites")
                 .Parameter("tags", ParameterType.Unparsed)
                 .Do(async (e) =>
@@ -368,7 +368,7 @@ namespace DiscordBot
                     await e.Channel.SendMessage(Jenkins.Websites.ListWebsites());
                 });
 
-            command.CreateCommand("addWebsite")
+            Command.CreateCommand("addWebsite")
                 .Description("Adds a website append tags with commas like nsfw or just names")
                 .Parameter("tags", ParameterType.Multiple)
                 .Alias(new string[] { "addwebsite", "aw" })
@@ -385,7 +385,7 @@ namespace DiscordBot
                     await e.User.SendMessage("URL is already here: \r\n" + ws);
                 });
 
-            command.CreateCommand("delWebsite")
+            Command.CreateCommand("delWebsite")
                 .Description("Deletes a website")
                 .Parameter("keyword", ParameterType.Required)
                 .Hide()
@@ -403,7 +403,7 @@ namespace DiscordBot
 
             #region Users
 
-            command.CreateCommand("users")
+            Command.CreateCommand("users")
                 .Description("All users I've ever seen writing :busts_in_silhouette: ")
                 .Do(async (e) =>
             {
@@ -411,7 +411,7 @@ namespace DiscordBot
                 await e.Channel.SendMessage(Jenkins.Users.ListUsers());
             });
 
-            command.CreateCommand("stats")
+            Command.CreateCommand("stats")
                 .Description("I'm counting everything since your first steps. Accept it.")
                 .Do(async (e) =>
             {
@@ -419,7 +419,7 @@ namespace DiscordBot
                 await e.Channel.SendMessage(Jenkins.Users.GetUserStats(e.Message.User.Id));
             });
 
-            command.CreateCommand("statsOf")
+            Command.CreateCommand("statsOf")
                 .Description("View the stats of someone else. HueHueHue.")
                 .Parameter("name", ParameterType.Required)
                 .Alias(new string[] { "so", "statsof" })
@@ -437,7 +437,7 @@ namespace DiscordBot
                     await e.Channel.SendMessage(Jenkins.Users.GetUserStats(userId));
                 });
 
-            command.CreateCommand("admins")
+            Command.CreateCommand("admins")
     .Description("All my existing masters for this server")
     .Do(async (e) =>
     {
@@ -450,7 +450,7 @@ namespace DiscordBot
 
             #region Insults
 
-            command.CreateCommand("insult")
+            Command.CreateCommand("insult")
                 .Description("Insulting an user of your choice :exclamation:")
                 .Alias(new string[] { "i" })
                 .Parameter("name", ParameterType.Required)
@@ -460,7 +460,7 @@ namespace DiscordBot
                     await e.Channel.SendTTSMessage(Supporter.BuildInsult(Jenkins.Insults.GetRandomInsult(true), e.Args[0].ToString()));
                 });
 
-            command.CreateCommand("addInsult")
+            Command.CreateCommand("addInsult")
                 .Description("Add a insult to my Vacabulary Hint: '*' will be the Username")
                 .Parameter("text", ParameterType.Required)
                 .Alias(new string[] { "ai", "addinsult" })
@@ -470,7 +470,7 @@ namespace DiscordBot
                     Jenkins.Insults.AddInsult(e.Message.User, e.Args[0]);
                 });
 
-            command.CreateCommand("insultMe")
+            Command.CreateCommand("insultMe")
                 .Description("If you insist...")
                 .Alias(new string[] { "im", "insultme" })
                 .Do(async (e) =>
@@ -479,7 +479,7 @@ namespace DiscordBot
                 await e.Channel.SendMessage(Supporter.BuildInsult(Jenkins.Insults.GetRandomInsult(true), e.Message.User.Name));
             });
 
-            command.CreateCommand("allInsults")
+            Command.CreateCommand("allInsults")
                 .Description("All insults in my vocabulary")
                 .Alias(new string[] { "insultlist", "allinsults", "insultList" })
                 .Do(async (e) =>
@@ -488,7 +488,7 @@ namespace DiscordBot
                     await e.Channel.SendMessage(Jenkins.Insults.ListInsults());
                 });
 
-            command.CreateCommand("insults")
+            Command.CreateCommand("insults")
                 .Description("All your own created insults")
                 .Alias(new string[] { "myinsults" })
                 .Do(async (e) =>
@@ -497,7 +497,7 @@ namespace DiscordBot
                     await e.Channel.SendMessage(Jenkins.Insults.ListInsultsForUser(e.Message.User, e.Message.Server.Id));
                 });
 
-            command.CreateCommand("delInsult")
+            Command.CreateCommand("delInsult")
                 .Description("Delete one of your insults")
                 .Parameter("index", ParameterType.Required)
                 .Alias(new string[] { "di", "delinsult" })
@@ -507,7 +507,7 @@ namespace DiscordBot
                     Jenkins.Insults.DelInsult(e.Message.User, int.Parse(e.Args[0]), e.Message.Server.Id);
                 });
 
-            command.CreateCommand("addVictim")
+            Command.CreateCommand("addVictim")
                 .Description("He should suffer too of you insist")
                 .Parameter("name", ParameterType.Required)
                 .Alias(new string[] { "av", "addvictim" })
@@ -531,7 +531,7 @@ namespace DiscordBot
                     }
                 });
 
-            command.CreateCommand("addVictimByID")
+            Command.CreateCommand("addVictimByID")
                 .Hide()
                 .Parameter("id", ParameterType.Required)
                 .Alias(new string[] { "avbi", "addvictimbyid" })
@@ -545,7 +545,7 @@ namespace DiscordBot
                     Jenkins.Insults.AddVictim(ulong.Parse(e.Args[0].ToString()));
                 });
 
-            command.CreateCommand("delVictim")
+            Command.CreateCommand("delVictim")
                 .Description("And he not...")
                 .Parameter("name", ParameterType.Required)
                 .Alias(new string[] { "dv", "delvictim" })
@@ -564,7 +564,7 @@ namespace DiscordBot
                     }
                 });
 
-            command.CreateCommand("victims")
+            Command.CreateCommand("victims")
                 .Description("They all shall suffer")
                 .Do(async (e) =>
                 {
@@ -576,7 +576,7 @@ namespace DiscordBot
 
             #region Quotes
 
-            command.CreateCommand("quotes")
+            Command.CreateCommand("quotes")
                 .Description("Quotes statistics")
                 .Alias(new string[] { "qs" })
                 .Do(async (e) =>
@@ -592,7 +592,7 @@ namespace DiscordBot
                     }
                 });
 
-            command.CreateCommand("quote")
+            Command.CreateCommand("quote")
                 .Description("You'll get one quote of my huge collection :bookmark: ")
                 .Alias(new string[] { "q" })
                 .Do(async (e) =>
@@ -608,7 +608,7 @@ namespace DiscordBot
                     }
                 });
 
-            command.CreateCommand("quoteOf")
+            Command.CreateCommand("quoteOf")
                 .Description("I'll search for a quote of the owner you prefer")
                 .Alias(new string[] { "qo", "quoteof" })
                 .Parameter("name", ParameterType.Required)
@@ -633,10 +633,10 @@ namespace DiscordBot
                     }
                 });
 
-            command.CreateCommand("quotesOf")
+            Command.CreateCommand("quotesOf")
                 .Description("I'll search for all quotes of the owner you prefer")
                 .Alias(new string[] { "qso", "quotesof" })
-                .Parameter("name", ParameterType.Unparsed)
+                .Parameter("text", ParameterType.Unparsed)
                 .Do(async (e) =>
                 {
                     await e.Message.Delete();
@@ -665,7 +665,7 @@ namespace DiscordBot
                     }
                 });
 
-            command.CreateCommand("addQuote")
+            Command.CreateCommand("addQuote")
                 .Alias(new string[] { "aq", "addquote" })
                 .Description("Adds your super fancy quote to my vocabulary")
                 .Parameter("text", ParameterType.Required)
@@ -679,7 +679,7 @@ namespace DiscordBot
                     await e.User.SendMessage("A new quote has been added, Sir!");
                 });
 
-            command.CreateCommand("findQuote")
+            Command.CreateCommand("findQuote")
                 .Alias(new string[] { "fq", "findquote" })
                 .Description("I'll search for a quote on your order, Sir!")
                 .Parameter("text", ParameterType.Unparsed)
@@ -706,7 +706,7 @@ namespace DiscordBot
                     }
                 });
 
-            command.CreateCommand("listQuotes")
+            Command.CreateCommand("listQuotes")
                 .Description("Shows all quotes you've created")
                 .Alias(new string[] { "lq", "listquotes" })
                 .Do(async (e) =>
@@ -720,7 +720,7 @@ namespace DiscordBot
                     }
                 });
 
-            command.CreateCommand("delQuote")
+            Command.CreateCommand("delQuote")
                 .Description("Removes one of ya quotes")
                 .Parameter("index", ParameterType.Required)
                 .Alias(new string[] { "dq", "delquote", "removeQuote", "removequote" })
@@ -738,7 +738,7 @@ namespace DiscordBot
 
             #region FunFacts
 
-            command.CreateCommand("funFact")
+            Command.CreateCommand("funFact")
                 .Description("Guess it")
                 .Parameter("params", ParameterType.Multiple)
                 .Alias(new string[] { "ff", "funfact" })
@@ -773,7 +773,7 @@ namespace DiscordBot
 
             #region Twitch
 
-            command.CreateCommand("watchChannel")
+            Command.CreateCommand("watchChannel")
                 .Description("Adds a Twitch-Channel to the watchlist of this channel :eye:")
                             .Parameter("name", ParameterType.Required)
                             .Alias(new string[] { "wc", "watchchannel", "addChannel", "addchannel", "followChannel", "followchannel" })
@@ -817,7 +817,7 @@ namespace DiscordBot
                             , e.Args[0]));
                 });
 
-            command.CreateCommand("unwatchChannel")
+            Command.CreateCommand("unwatchChannel")
                 .Description("Removes the desired Twitch-Channel from the watchlist")
                 .Parameter("name", ParameterType.Required)
                 .Alias(new string[] { "uc", "unwatchchannel", "delChannel", "delchannel", "unfollowChannel", "unfollowchannel" })
@@ -842,7 +842,7 @@ namespace DiscordBot
                             , e.Message.Channel.Name));
                 });
 
-            command.CreateCommand("channels")
+            Command.CreateCommand("channels")
                 .Description("View all Twitch-Channels I'm watching for this channel")
                 .Alias(new string[] { "followingChannels", "followingchannels" })
                 .Do(async (e) =>
@@ -870,7 +870,7 @@ namespace DiscordBot
 
             #region Giphy
 
-            command.CreateCommand("rgif")
+            Command.CreateCommand("rgif")
                 .Description("I'm spitting out a random GIF :frame_photo:")
                 .Do(async (e) =>
             {
@@ -878,7 +878,7 @@ namespace DiscordBot
                 Giphy.GetRandomGIF(e.Message.Channel);
             });
 
-            command.CreateCommand("tgif")
+            Command.CreateCommand("tgif")
                 .Description("The currently top-trending GIF on Giphy")
                 .Do(async (e) =>
             {
@@ -886,7 +886,7 @@ namespace DiscordBot
                 Giphy.GetTrendingGIF(e.Message.Channel);
             });
 
-            command.CreateCommand("gif")
+            Command.CreateCommand("gif")
                 .Description("I'll search a GIF for you, darling <3")
                 .Parameter("keyword", ParameterType.Required)
                 .Do(async (e) =>
@@ -899,7 +899,7 @@ namespace DiscordBot
 
             #region VoiceCommands
 
-            command.CreateCommand("pardy")
+            Command.CreateCommand("pardy")
                 .Description("Maaskantje joooonge! :loud_sound:")
                 .Do(async (e) =>
                 {
@@ -917,7 +917,7 @@ namespace DiscordBot
                 }
              );
 
-            command.CreateCommand("attack")
+            Command.CreateCommand("attack")
                 .Description("Type the name of the vChannel hehe xd")
                 .Parameter("channel", ParameterType.Required)
                 .Do(async (e) =>
@@ -948,7 +948,7 @@ namespace DiscordBot
                 }
              );
 
-            command.CreateCommand("slowClap")
+            Command.CreateCommand("slowClap")
                 .Description("Excellent :clap:")
                 .Alias(new string[] { "slowclap", "clap" })
                 .Do(async (e) =>
@@ -967,7 +967,7 @@ namespace DiscordBot
                 }
              );
 
-            command.CreateCommand("airhorn")
+            Command.CreateCommand("airhorn")
                 .Description("Are u a MLG? :loud_sound: ")
                 .Do(async (e) =>
                 {
@@ -982,7 +982,7 @@ namespace DiscordBot
                 }
              );
 
-            command.CreateCommand("lul")
+            Command.CreateCommand("lul")
                 .Description("At your own risk")
                 .Do(async (e) =>
                 {
@@ -998,9 +998,29 @@ namespace DiscordBot
                         Audio.StreamFileToVoiceChannel(path, vChannel);
                     }
                 }
+
+
         );
 
-            command.CreateCommand("play")
+            Command.CreateCommand("maennerwiewir")
+                .Description("At your own risk")
+                .Alias(new string[] { "mww", "spongebob" })
+                .Do(async (e) =>
+                {
+                    await e.Message.Delete();
+                    Channel vChannel = e.User.VoiceChannel;
+
+                    if (vChannel != null)
+                    {
+                        string path = Path.Combine(Environment.CurrentDirectory, "files", "mp3", "paddo.mp3");
+                        Audio.StreamFileToVoiceChannel(path, vChannel);
+                    }
+                }
+
+
+        );
+
+            Command.CreateCommand("play")
                 .Description("Streams a YouTube Video to your vChannel :musical_note:")
                 .Parameter("url", ParameterType.Required)
                 .Do(async (e) =>
@@ -1025,7 +1045,7 @@ namespace DiscordBot
                 }
                     );
 
-            command.CreateCommand("random")
+            Command.CreateCommand("random")
                 .Description("I'll stream some weird random shit to your vChannel, dude")
                 .Do((e) =>
                 {
@@ -1033,7 +1053,7 @@ namespace DiscordBot
                 }
                     );
 
-            command.CreateCommand("stop")
+            Command.CreateCommand("stop")
                 .Description("Stops the playing audio")
                 .Do(async (e) =>
                 {
@@ -1051,7 +1071,7 @@ namespace DiscordBot
 
             #region Spotify
 
-            command.CreateCommand("playSong")
+            Command.CreateCommand("playSong")
                .Description("Plays a Song on Spotify")
                .Parameter("name", ParameterType.Required)
                 .Alias(new string[] { "ps", "playsong" })
@@ -1066,7 +1086,7 @@ namespace DiscordBot
                    await e.Channel.SendMessage(track.Artists + " " + track.Name);
                });
 
-            command.CreateCommand("playList")
+            Command.CreateCommand("playList")
                .Description("Plays a Playlist on Spotify")
                .Parameter("name", ParameterType.Required)
                 .Alias(new string[] { "pl", "playlist", "playPlaylist", "playplaylist" })
@@ -1084,7 +1104,7 @@ namespace DiscordBot
 
             #region Administration
 
-            command.CreateCommand("globalChannels")
+            Command.CreateCommand("globalChannels")
                 .Alias(new string[] { "allChannels", "allchannels", "globalchannels" })
                 .Hide()
                 .Do(async (e) =>
@@ -1113,7 +1133,7 @@ namespace DiscordBot
                     await e.Channel.SendMessage(sb.ToString());
                 });
 
-            command.CreateCommand("settings")
+            Command.CreateCommand("settings")
                 .Description("My current configuration :gear:")
                 .Alias(new string[] { "config", "cfg", "preferences" })
                 .Do(async (e) =>
@@ -1125,7 +1145,7 @@ namespace DiscordBot
                     await e.Channel.SendMessage(Config.GetConfiguration(!e.Message.Channel.IsPrivate && !Jenkins.Users.IsUserDev(e.Message.User.Id)));
                 });
 
-            command.CreateCommand("loadConfig")
+            Command.CreateCommand("loadConfig")
                 .Description("Reloads my config")
                 .Alias(new string[] { "loadconfig", "reloadconfig", "reloadConfig" })
                 .Hide()
@@ -1138,7 +1158,7 @@ namespace DiscordBot
                     Config.LoadConfig();
                 });
 
-            command.CreateCommand("say")
+            Command.CreateCommand("say")
                 .Description("I will announce news in your name")
                 .Parameter("text", ParameterType.Unparsed)
                 .Do(async (e) =>
@@ -1151,7 +1171,7 @@ namespace DiscordBot
                     await e.Message.Channel.SendTTSMessage(e.Args[0]);
                 });
 
-            command.CreateCommand("mute")
+            Command.CreateCommand("mute")
                 .Description("One word and I'll shut my dirty mouth!")
                 .Do(async (e) =>
                 {
@@ -1163,7 +1183,7 @@ namespace DiscordBot
                     Config.Muted = true;
                 });
 
-            command.CreateCommand("unmute")
+            Command.CreateCommand("unmute")
                 .Description("The show must go on")
                 .Do(async (e) =>
                 {
@@ -1175,7 +1195,7 @@ namespace DiscordBot
                     Config.Muted = false;
                 });
 
-            command.CreateCommand("enableTTS")
+            Command.CreateCommand("enableTTS")
                 .Description("I'll turn into a speaking war-machine")
                 .Alias(new string[] { "ttson", "TTSOn", "enabletts" })
                 .Do(async (e) =>
@@ -1188,7 +1208,7 @@ namespace DiscordBot
                     Config.TTSEnabled = true;
                 });
 
-            command.CreateCommand("disableTTS")
+            Command.CreateCommand("disableTTS")
                 .Description("Shy Ronnie?")
                 .Alias(new string[] { "ttsoff", "TTSOff", "disabletts" })
                 .Do(async (e) =>
@@ -1201,7 +1221,7 @@ namespace DiscordBot
                     Config.TTSEnabled = false;
                 });
 
-            command.CreateCommand("nuke")
+            Command.CreateCommand("nuke")
                 .Description("Nuke the chat")
                 .Alias(new string[] { "clear" })
                 .Parameter("count", ParameterType.Required)
@@ -1221,7 +1241,7 @@ namespace DiscordBot
                     await e.Message.Channel.DeleteMessages(messages);
                 });
 
-            command.CreateCommand("nukeUser")
+            Command.CreateCommand("nukeUser")
                 .Description("Deleting the users messages")
                 .Parameter("user", ParameterType.Required)
                 .Parameter("count", ParameterType.Optional)
@@ -1259,7 +1279,7 @@ namespace DiscordBot
                     await e.Message.Channel.DeleteMessages(userMessages.ToArray());
                 });
 
-            command.CreateCommand("promote")
+            Command.CreateCommand("promote")
                 .Description("Promotes a normal user to a super-sonic Admin!")
                 .Parameter("name", ParameterType.Required)
                 .Do(async (e) =>
@@ -1280,7 +1300,7 @@ namespace DiscordBot
                     }
                 });
 
-            command.CreateCommand("degrade")
+            Command.CreateCommand("degrade")
                 .Description("Turns an Admin to one of the common mob")
                 .Parameter("name", ParameterType.Required)
                 .Do(async (e) =>
@@ -1301,7 +1321,7 @@ namespace DiscordBot
                     }
                 });
 
-            command.CreateCommand("setGame")
+            Command.CreateCommand("setGame")
                 .Description("Configure my current Game")
                 .Hide()
                 .Parameter("name", ParameterType.Unparsed)
@@ -1322,7 +1342,7 @@ namespace DiscordBot
                     }
                 });
 
-            command.CreateCommand("helpop")
+            Command.CreateCommand("helpop")
                 .Description("Ask all admins a question")
                 .Parameter("text", ParameterType.Unparsed)
                 .Do(async (e) =>
@@ -1331,7 +1351,7 @@ namespace DiscordBot
                     NotifyDevs(e.Args[0]);
                 });
 
-            command.CreateCommand("backup")
+            Command.CreateCommand("backup")
                 .Description("Provides information about the backup preferences")
                 .Hide()
                 .Do(async (e) =>
@@ -1343,7 +1363,7 @@ namespace DiscordBot
                     await e.Message.Channel.SendMessage(Jenkins.CheckAndScheduleBackUp());
                 });
 
-            command.CreateCommand("shutdown")
+            Command.CreateCommand("shutdown")
                 .Description("Bye bye.")
                 .Hide()
                 .Do(async (e) =>
@@ -1363,7 +1383,7 @@ namespace DiscordBot
 
             #region Food
 
-            command.CreateCommand("foodHelp")
+            Command.CreateCommand("foodHelp")
                             .Description("FOOD")
                             .Hide()
                             .Alias(new string[] { "foodhelp", "helpFood", "helpfood", "votehelp", "voteHelp" })
@@ -1388,7 +1408,7 @@ namespace DiscordBot
                                 await e.Channel.SendMessage(sb.ToString());
                             });
 
-            command.CreateCommand("foodBlock")
+            Command.CreateCommand("foodBlock")
                             .Description("FOOD")
                             .Hide()
                             .Alias(new string[] { "foodb", "foodblock" })
@@ -1407,7 +1427,7 @@ namespace DiscordBot
                                 }
                             });
 
-            command.CreateCommand("food")
+            Command.CreateCommand("food")
                             .Description("FOOD")
                             .Hide()
                             .Alias(new string[] { "imhungry" })
@@ -1436,7 +1456,7 @@ namespace DiscordBot
                                 await e.Channel.SendMessage(answer);
                             });
 
-            command.CreateCommand("foodAll")
+            Command.CreateCommand("foodAll")
                             .Description("FOOD")
                             .Hide()
                             .Alias(new string[] { "fooda", "allfood", "allFood", "foodall" })
@@ -1457,7 +1477,7 @@ namespace DiscordBot
                                 await e.Channel.SendMessage(answer);
                             });
 
-            command.CreateCommand("foodAllb")
+            Command.CreateCommand("foodAllb")
                             .Description("FOOD")
                             .Hide()
                             .Alias(new string[] { "foodb", "allfoodb", "allFoodb", "foodallb" })
@@ -1473,7 +1493,7 @@ namespace DiscordBot
                                 }
                             });
 
-            command.CreateCommand("addFoodOption")
+            Command.CreateCommand("addFoodOption")
                             .Description("MORE FOOD")
                             .Hide()
                             .Alias(new string[] { "addFoodOption", "addfood", "addfoodoption", "addFoodoption", "addfoodOption" })
@@ -1506,7 +1526,7 @@ namespace DiscordBot
                                 await e.Channel.SendMessage("**" + e.Args[0] + "** was added.");
                             });
 
-            command.CreateCommand("getFoodOption")
+            Command.CreateCommand("getFoodOption")
                             .Description("FOOD")
                             .Hide()
                             .Alias(new string[] { "foodOption", "foodoption", "getFood", "getfood" })
@@ -1517,7 +1537,7 @@ namespace DiscordBot
                                 await e.Channel.SendMessage(Food.GetFoodOption(e.Args[0]));
                             });
 
-            command.CreateCommand("getFoodOptions")
+            Command.CreateCommand("getFoodOptions")
                             .Description("FOOD")
                             .Hide()
                             .Alias(new string[] { "foodOptions", "foodoptions", "getFoodAll", "getfoodall" })
@@ -1531,7 +1551,7 @@ namespace DiscordBot
                                 }
                             });
 
-            command.CreateCommand("startVote")
+            Command.CreateCommand("startVote")
                             .Description("FOOD")
                             .Hide()
                             .Alias(new string[] { "startvote" })
@@ -1547,7 +1567,7 @@ namespace DiscordBot
                                     Food.StartVote(Supporter.GetParsedDateTime(e.Args[0]), e.Channel);
                             });
 
-            command.CreateCommand("nextVote")
+            Command.CreateCommand("nextVote")
                             .Description("FOOD")
                             .Hide()
                             .Alias(new string[] { "nextvote" })
@@ -1568,16 +1588,16 @@ namespace DiscordBot
                                 await e.Channel.SendMessage(msg);
                             });
 
-            command.CreateCommand("vote")
+            Command.CreateCommand("vote")
                             .Description("FOOD")
                             .Hide()
                             .Alias(new string[] { "voteFood", "votefood" })
-                            .Parameter("krz", ParameterType.Optional)
+                            .Parameter("krz", ParameterType.Unparsed)
                             .Do(async (e) =>
                             {
                                 if (!Food.IsVoteRunning)
                                 {
-                                    await e.Channel.SendMessage("Für was willst du abstimmen, " + e.Message.User.Mention + " ?");
+                                    await e.Channel.SendMessage("Für was willst du abstimmen, " + e.Message.User.Mention + " ? Es läuft kein Voting.");
                                     return;
                                 }
                                 if (Food.IsValidKRZ(e.Args[0]))
@@ -1600,7 +1620,7 @@ namespace DiscordBot
                                 }
                             });
 
-            command.CreateCommand("votes")
+            Command.CreateCommand("votes")
                             .Description("FOOD")
                             .Hide()
                             .Alias(new string[] { "voteFood", "votefood" })
@@ -1614,7 +1634,7 @@ namespace DiscordBot
                                 await e.Channel.SendMessage(Food.GetVotes());
                             });
 
-            command.CreateCommand("delFoodOption")
+            Command.CreateCommand("delFoodOption")
                             .Description("FOOD")
                             .Hide()
                             .Alias(new string[] { "delfoodOption", "delfoodoption" })
@@ -1630,7 +1650,7 @@ namespace DiscordBot
                                 await e.Channel.SendMessage("**" + e.Args[0] + "** was delted");
                             });
 
-            command.CreateCommand("schnaut")
+            Command.CreateCommand("schnaut")
                             .Description("FOOD")
                             .Hide()
                             .Do(async (e) =>
@@ -1647,7 +1667,7 @@ namespace DiscordBot
 
             #region Observe
 
-            command.CreateCommand("observeHelp")
+            Command.CreateCommand("observeHelp")
                             .Description("Observe")
                             .Hide()
                             .Alias(new string[] { "oh", "observehelp" })
@@ -1668,7 +1688,7 @@ namespace DiscordBot
                                 await e.Channel.SendMessage(sb.ToString());
                             });
 
-            command.CreateCommand("watchServer")
+            Command.CreateCommand("watchServer")
                             .Description("Observe")
                             .Hide()
                             .Alias(new string[] { "watchserver", "ws" })
@@ -1683,7 +1703,7 @@ namespace DiscordBot
                                 Observe.AddServer(e.Args[0]);
                             });
 
-            command.CreateCommand("unwatchServer")
+            Command.CreateCommand("unwatchServer")
                             .Description("Observe")
                             .Hide()
                             .Alias(new string[] { "unwatchserver", "us" })
@@ -1698,7 +1718,7 @@ namespace DiscordBot
                                 Observe.DelServer(e.Args[0]);
                             });
 
-            command.CreateCommand("allServers")
+            Command.CreateCommand("allServers")
                             .Description("Observe")
                             .Hide()
                             .Alias(new string[] { "servers", "as" })
@@ -1712,7 +1732,7 @@ namespace DiscordBot
                                 await e.Channel.SendMessage(Supporter.BuildList("All servers", Observe.GetAllServerNames()));
                             });
 
-            command.CreateCommand("observingServers")
+            Command.CreateCommand("observingServers")
                             .Description("Observe")
                             .Hide()
                             .Alias(new string[] { "observingservers", "os" })
@@ -1730,7 +1750,7 @@ namespace DiscordBot
 
             #region GamesSync
 
-            command.CreateCommand("gamesHelp")
+            Command.CreateCommand("gamesHelp")
                             .Description("GamesSync")
                             .Hide()
                             .Alias(new string[] { "gh", "gameshelp" })
@@ -1751,7 +1771,7 @@ namespace DiscordBot
                                 await e.Channel.SendMessage(sb.ToString());
                             });
 
-            command.CreateCommand("syncServer")
+            Command.CreateCommand("syncServer")
                             .Description("GamesSync")
                             .Hide()
                             .Alias(new string[] { "syncserver" })
@@ -1775,7 +1795,7 @@ namespace DiscordBot
                                 }
                             });
 
-            command.CreateCommand("unSyncServer")
+            Command.CreateCommand("unSyncServer")
                             .Description("GamesSync")
                             .Hide()
                             .Alias(new string[] { "unsyncServer", "unsyncserver" })
@@ -1799,7 +1819,7 @@ namespace DiscordBot
                                 }
                             });
 
-            command.CreateCommand("allSyncServers")
+            Command.CreateCommand("allSyncServers")
                             .Description("GamesSync")
                             .Hide()
                             .Alias(new string[] { "syncServers", "syncservers" })
@@ -1813,7 +1833,7 @@ namespace DiscordBot
                                 await e.Channel.SendMessage(Supporter.BuildList("All syncing servers", Jenkins.GamesSync.GetAllSyncingServerNames()));
                             });
 
-            command.CreateCommand("sync")
+            Command.CreateCommand("sync")
                             .Description("GamesSync")
                             .Hide()
                             .Do((e) =>
@@ -1830,7 +1850,7 @@ namespace DiscordBot
 
             #region Test
 
-            command.CreateCommand("throwException")
+            Command.CreateCommand("throwException")
                 .Description("Guess it")
                 .Hide()
                 .Do(async (e) =>
@@ -1843,7 +1863,7 @@ namespace DiscordBot
                     await e.Channel.SendMessage(numberz[3].ToString());
                 });
 
-            command.CreateCommand("test")
+            Command.CreateCommand("test")
                 .Description("Guess it")
                 .Hide()
                 .Do((e) =>
@@ -1854,6 +1874,32 @@ namespace DiscordBot
                     }
                     Jenkins.GamesSync.Init();
                 });
+
+            Command.CreateCommand("PaperRockScissor")
+            .Description("Challenge someone to a Paper-Rock-Scissor game")
+            .Parameter("users", ParameterType.Unparsed)
+            .Alias(new string[] { "battle", "game" })
+            .Do(async (e) =>
+            {
+                await e.Message.Delete();
+                if(e.Message.IsMentioningMe())
+                {
+                    // ToDo 
+                    return;
+                }
+                if(e.Message.MentionedUsers.Count() == 0 || e.Message.MentionedUsers.Count() >= 3 || e.Channel.IsPrivate)
+                {
+                    return;
+                }
+                if(e.Message.MentionedUsers.Count() == 1)
+                {
+                    PaperRockScissors game = new PaperRockScissors(e.Channel, e.User, e.Message.MentionedUsers.First(), true);
+                }
+                if (e.Message.MentionedUsers.Count() == 2)
+                {
+                    PaperRockScissors game = new PaperRockScissors(e.Channel, e.Message.MentionedUsers.ElementAt(0), e.Message.MentionedUsers.ElementAt(1), false);
+                }
+            });
 
             #endregion Test
 
