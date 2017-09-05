@@ -175,6 +175,7 @@
     <Compile Include="Google.cs" />
     <Compile Include="PaperRockScissors.cs" />
     <Compile Include="PRSGame.cs" />
+    <Compile Include="QuoteStatDAO.cs" />
     <Compile Include="QuoteDAO.cs" />
     <Compile Include="Websites.cs" />
     <Compile Include="Insults.cs" />

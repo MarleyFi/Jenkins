@@ -588,11 +588,11 @@ namespace DiscordBot
                     await e.Message.Delete();
                     if (Config.TTSEnabled)
                     {
-                        await e.Channel.SendTTSMessage(Jenkins.Quotes.GetQuoteStatistics());
+                        await e.Channel.SendTTSMessage(Jenkins.Quotes.quoteStatistics());
                     }
                     else
                     {
-                        await e.Channel.SendMessage(Jenkins.Quotes.GetQuoteStatistics());
+                        await e.Channel.SendMessage(Jenkins.Quotes.quoteStatistics());
                     }
                 });
 
@@ -647,23 +647,27 @@ namespace DiscordBot
                 .Do(async (e) =>
                 {
                     await e.Message.Delete();
-                    DataRow[] quotes = Jenkins.Quotes.GetQuotesOf(e.Args[0].ToString());
-                    if (quotes.Length >= 1)
+
+                    //DataRow[] quotes = Jenkins.Quotes.GetQuotesOf(e.Args[0].ToString());
+                    List<QuoteDAO> quotes = Jenkins.Quotes.quotesByOwner(e.Args[0].ToString());
+                    int index = 0;
+                    if (quotes.Count >= 1)
                     {
                         StringBuilder sb = new StringBuilder();
                         int internalCounter = 0;
-                        for (int i = 0; i < quotes.Length; i++)
+                        foreach (QuoteDAO quote in quotes)
                         {
-                            sb.AppendFormat((i + 1).ToString() + ". " + Supporter.BuildQuote(quotes[i]["MESSAGE"].ToString(), quotes[i]["OWNER"].ToString()));
+                            sb.AppendFormat((index + 1).ToString() + ". " + Supporter.BuildQuote(quote));
                             sb.AppendLine();
                             sb.AppendLine();
                             internalCounter++;
-                            if (internalCounter == 3 || i == (quotes.Length - 1))
+                            if (internalCounter == 3 || index == (quotes.Count - 1))
                             {
                                 await e.Channel.SendMessage(sb.ToString());
                                 internalCounter = 0;
                                 sb.Clear();
                             }
+                            index++;
                         }
                     }
                     else

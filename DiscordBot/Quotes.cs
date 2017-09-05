@@ -133,32 +133,7 @@ namespace DiscordBot
             return sb.ToString();
         }
 
-        public string quoteStatistics()
-        {
-            List<QuoteStatDAO> quoteStats = new List<QuoteStatDAO>();
-            var response = Bot.HttpClient.GetStringAsync("http://api.h2591678.stratoserver.net?action=quoteStatistics");
-            response.Wait();
-            string responseString = response.Result;
-            if (responseString == "[]")
-            {
-                return null;
-            }
-            var quoteArray = JArray.Parse(responseString);
-            foreach (var quoteObject in quoteArray)
-            {
-                quoteStats.Add(quoteObject.ToObject<QuoteStatDAO>());
-            }
-            StringBuilder sb = new StringBuilder().AppendLine("<- - - **Quote statistics** - - ->");
-            sb.AppendLine();
-            int quotesCount = quoteStats.Sum(stat => stat.quotes);
-            foreach (var quoteStat in quoteStats)
-            {
-                sb.AppendLine("- > **" + quoteStat.name + "** " + quoteStat.quotes + (quoteStat.quotes >= 2 ? " quotes" : " quote") + " - **" + Supporter.GetPercentageString(quoteStat.quotes, quotesCount) + "**");
-            }
-            sb.AppendLine();
-            sb.AppendLine("**" + quotesCount + "** total count of quotes");
-            return sb.ToString();
-        }
+        
 
         private int GetQuotesCountOfOwner(string owner, EnumerableRowCollection<DataRow> quotes)
         {
@@ -176,6 +151,8 @@ namespace DiscordBot
             quotes.ElementAt<DataRow>(index).Delete();
             Jenkins.Write();
         }
+
+        #region Quotes-API
 
         public void SyncQuotes()
         {
@@ -246,6 +223,24 @@ namespace DiscordBot
             return quote;
         }
 
+        public List<QuoteDAO> quotesByOwner(string owner)
+        {
+            List<QuoteDAO> quotes = new List<QuoteDAO>();
+            var response = Bot.HttpClient.GetStringAsync(string.Format("http://api.h2591678.stratoserver.net?action=quotesOf&owner={0}", owner));
+            response.Wait();
+            string responseString = response.Result;
+            if (responseString == "[]")
+            {
+                return null;
+            }
+            var quoteArray = JArray.Parse(responseString);
+            foreach (var quoteObject in quoteArray)
+            {
+                quotes.Add(quoteObject.ToObject<QuoteDAO>());
+            }
+            return quotes;
+        }
+
         public QuoteDAO randomQuote(int rating = 0)
         {
             List<QuoteDAO> quotes = new List<QuoteDAO>();
@@ -279,7 +274,34 @@ namespace DiscordBot
             var result = postResponse.Result;
         }
 
+        public string quoteStatistics()
+        {
+            List<QuoteStatDAO> quoteStats = new List<QuoteStatDAO>();
+            var response = Bot.HttpClient.GetStringAsync("http://api.h2591678.stratoserver.net?action=quoteStatistics");
+            response.Wait();
+            string responseString = response.Result;
+            if (responseString == "[]")
+            {
+                return null;
+            }
+            var quoteArray = JArray.Parse(responseString);
+            foreach (var quoteObject in quoteArray)
+            {
+                quoteStats.Add(quoteObject.ToObject<QuoteStatDAO>());
+            }
+            StringBuilder sb = new StringBuilder().AppendLine("<- - - **Quote statistics** - - ->");
+            sb.AppendLine();
+            int quotesCount = quoteStats.Sum(stat => stat.quotes);
+            foreach (var quoteStat in quoteStats)
+            {
+                sb.AppendLine("- > **" + quoteStat.name + "** " + quoteStat.quotes + (quoteStat.quotes >= 2 ? " quotes" : " quote") + " - **" + Supporter.GetPercentageString(quoteStat.quotes, quotesCount) + "**" + (quoteStat.rating == null ? string.Empty :" average rating: **"+ quoteStat.rating+"/5**").ToString());
+            }
+            sb.AppendLine();
+            sb.AppendLine("**" + quotesCount + "** total count of quotes");
+            return sb.ToString();
+        }
 
+        #endregion Quotes-API
 
         #endregion Methods
     }

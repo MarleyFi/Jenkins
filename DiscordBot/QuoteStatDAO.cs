@@ -13,6 +13,6 @@ namespace DiscordBot
 
         public int quotes { get; set; }
 
-        public int rating { get; set; }
+        public double ?rating { get; set; }
     }
 }
