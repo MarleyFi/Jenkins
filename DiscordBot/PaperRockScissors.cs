@@ -1,15 +1,22 @@
 ﻿using Discord;
+using Discord.Commands;
+using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace DiscordBot
 {
-    internal class PaperRockScissors
+    public class PaperRockScissors : IDisposable
     {
+        SafeHandle handle = new SafeFileHandle(IntPtr.Zero, true);
+
+        private bool disposed = false;
+
         private Timer battleTimer;
 
         private Channel tChannel;
@@ -29,6 +36,8 @@ namespace DiscordBot
         private string reason;
 
         private bool isChallenge = false;
+
+        CommandService GameCommandService = Bot.Client.GetService<CommandService>();
 
         private string userNotifyTemplate
         {
@@ -62,7 +71,7 @@ namespace DiscordBot
             this.isChallenge = isChallenge;
             SetupBattle();
 
-            Bot.Command.CreateCommand("Scissors")
+            GameCommandService.CreateCommand("Scissors")
                 .Description("Scrissors-choice")
                 .Hide()
                 .Alias(new string[] { "scissors, s" })
@@ -72,16 +81,17 @@ namespace DiscordBot
                     {
                         challengerChoice = Choice.Scissors;
                         CheckBattle(true);
+                        await e.User.SendMessage("Your choice is scissors.");
                     }
                     if (e.User.Id == adversaryUser.Id)
                     {
                         adversaryChoice = Choice.Scissors;
                         CheckBattle(false);
+                        await e.User.SendMessage("Your choice is scissors.");
                     }
-                    await e.User.SendMessage("Your choice is scissors.");
                 });
 
-            Bot.Command.CreateCommand("Rock")
+            GameCommandService.CreateCommand("Rock")
                 .Description("Rock-choice")
                 .Hide()
                 .Alias(new string[] { "rock, r" })
@@ -91,16 +101,17 @@ namespace DiscordBot
                     {
                         challengerChoice = Choice.Rock;
                         CheckBattle(true);
+                        await e.User.SendMessage("Your choice is rock.");
                     }
                     if (e.User.Id == adversaryUser.Id)
                     {
                         adversaryChoice = Choice.Rock;
                         CheckBattle(false);
+                        await e.User.SendMessage("Your choice is rock.");
                     }
-                    await e.User.SendMessage("Your choice is rock.");
                 });
 
-            Bot.Command.CreateCommand("Paper")
+            GameCommandService.CreateCommand("Paper")
                 .Description("Paper-choice")
                 .Hide()
                 .Alias(new string[] { "paper, p" })
@@ -110,13 +121,14 @@ namespace DiscordBot
                     {
                         challengerChoice = Choice.Paper;
                         CheckBattle(true);
+                        await e.User.SendMessage("Your choice is paper.");
                     }
                     if (e.User.Id == adversaryUser.Id)
                     {
                         adversaryChoice = Choice.Paper;
                         CheckBattle(false);
+                        await e.User.SendMessage("Your choice is paper.");
                     }
-                    await e.User.SendMessage("Your choice is paper.");
                 });
         }
 
@@ -187,7 +199,7 @@ namespace DiscordBot
 
         private async void AnnounceBattle()
         {
-            await tChannel.SendMessage(challengerUser.Mention + (isChallenge ? " challenges " : " vs. ") + adversaryUser.Mention + " in a Paper-Rock-Scrissor-Battle"
+            await tChannel.SendMessage(challengerUser.Mention + (isChallenge ? " challenges " : " vs. ") + adversaryUser.Mention + " in a Paper-Rock-Scissor-Battle"
                 + (reason.Equals(string.Empty) ? "." : " the loser have to **" + reason + "**."));
 
             gameMessage = await tChannel.SendMessage("...waiting for users to pick their choices");
@@ -216,6 +228,33 @@ namespace DiscordBot
             await gameMessage.Edit(game.Result);
             //finish = true;
             battleTimer.Dispose();
+            GameCommandService = null;
+            Dispose();
+        }
+
+        public void Dispose()
+        {
+            // Dispose of unmanaged resources.
+            Dispose(true);
+            // Suppress finalization.
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposed)
+                return;
+
+            if (disposing)
+            {
+                handle.Dispose();
+                // Free any other managed objects here.
+                //
+            }
+
+            // Free any unmanaged objects here.
+            //
+            disposed = true;
         }
 
     }

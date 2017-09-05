@@ -134,7 +134,7 @@ namespace DiscordBot
             if (userVotes.Keys.Contains(userId)) // User hat bereits gevotet
             {
                 string oldVote = userVotes[userId];
-                if(oldVote.ToLower().Equals(vote.ToLower()))
+                if (oldVote.ToLower().Equals(vote.ToLower()))
                 {
                     voteChannel.SendMessage("<@" + userId + "> deine Stimme ist bereits für **" + foodName + "** [**" + vote.ToUpper() + "**] festgelegt");
                     return;
@@ -150,7 +150,7 @@ namespace DiscordBot
             else // Neuer Vote
             {
                 userVotes.Add(userId, vote.ToLower());
-                voteChannel.SendMessage("Eine neue Stimme für **" + foodName+"** [**"+vote.ToUpper() + "**] wurde von <@" + userId + "> abgegeben");
+                voteChannel.SendMessage("Eine neue Stimme für **" + foodName + "** [**" + vote.ToUpper() + "**] wurde von <@" + userId + "> abgegeben");
             }
 
             int count = 0;
@@ -187,11 +187,13 @@ namespace DiscordBot
             foreach (var vote in votes)
             {
                 string usersVotedfor = "";
+                List<ulong> userIdsOfVote = new List<ulong>();
                 foreach (var userVote in userVotes)
                 {
                     if (userVote.Value == vote.Key)
                     {
                         usersVotedfor = usersVotedfor + "<@" + userVote.Key + "> ";
+                        userIdsOfVote.Add(userVote.Key);
                     }
                 }
                 sb.AppendLine(string.Format("**{0}**/{1} stimmen für **{2}** [**{3}**] -> {4}",
@@ -200,6 +202,18 @@ namespace DiscordBot
                     GetFoodName(vote.Key),
                     vote.Key.ToUpper(),
                     usersVotedfor));
+                if (vote.Value >= 2 && userIdsOfVote.Count() >= 2) // dice who have to drive
+                {
+                    if (userIdsOfVote.Contains(238207871433572352)) // Römer hat kein Auto
+                    {
+                        userIdsOfVote.Remove(238207871433572352);
+                    }
+                    if (userIdsOfVote.Contains(111794715690549248) && Supporter.GetRandom(3) == 1) // wie wahrscheinlich ist es das 111794715690549248 fahren muss: 1:3
+                    {
+                        userIdsOfVote.Remove(111794715690549248);
+                    }
+                    sb.AppendLine("--> :game_die: fahren muss <@" + userIdsOfVote[Supporter.GetRandom(0, (userIdsOfVote.Count-1))] + "> :red_car::dash:");
+                }
             }
 
             if (votesTotal == 0)
@@ -230,6 +244,11 @@ namespace DiscordBot
                 sb.AppendLine("Enthalten haben sich " + abstinenceUserMentions);
 
             voteChannel.SendMessage(sb.ToString());
+
+            //var duplicatevotes = votes.GroupBy(x => x)
+            //            .Where(group => group.Count() >= (2)) 
+            //            .Select(group => group.Key);
+
             IsVoteRunning = false;
             ScheduleNextVote();
         }
@@ -304,7 +323,7 @@ namespace DiscordBot
             Bot.NotifyDevs(string.Format("Notifed {0} users to vote", count));
         }
 
-        public static void AddFoodOption(string krz, string name, string desc = null, IEnumerable<Day> days = null, string info = null)
+        public static void AddFoodOption(string krz, string name, string desc = null, IEnumerable<Day> days = null, string info = null, bool driverRequired = true)
         {
             var table = Jenkins.Database.Tables["FOODOPTIONS"];
             if (table.Rows.Find(krz) != null)
@@ -331,7 +350,7 @@ namespace DiscordBot
             if (info == "")
                 info = null;
 
-            table.Rows.Add(krz, name, desc, daysString, info);
+            table.Rows.Add(krz, name, desc, daysString, info, driverRequired);
             Jenkins.Write();
         }
 

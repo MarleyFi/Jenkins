@@ -15,7 +15,7 @@ namespace DiscordBot
     {
         #region Variables
 
-        public static bool IsPlaying = true;
+        public static bool IsPlaying = false;
         private static string audioPath;
         private static string mp3Path;
         public static Message MediaMessage;
@@ -93,6 +93,7 @@ namespace DiscordBot
 
         public static async void StreamFileToVoiceChannel(string path, Channel vChannel)
         {
+            IsPlaying = true;
             var vClient = await Bot.Client.GetService<AudioService>().Join(vChannel);
             var channelCount = Bot.Client.GetService<AudioService>().Config.Channels;
             var OutFormat = new WaveFormat(48000, 16, channelCount);
@@ -115,6 +116,7 @@ namespace DiscordBot
                 }
                 vClient.Wait();
             }
+            IsPlaying = false;
             await vClient.Disconnect();
         }
 

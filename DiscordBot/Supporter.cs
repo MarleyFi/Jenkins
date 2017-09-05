@@ -110,6 +110,24 @@ namespace DiscordBot
                 , owner);
         }
 
+        public static string BuildQuote(QuoteDAO quote)
+        {
+            string dateInfo = string.Empty;
+            if(quote.datecreated != null && quote.datebirth == null)
+            {
+                dateInfo = ", " + DateTime.Parse(quote.datecreated).Date.ToLongDateString();
+            }
+            else if(quote.datecreated != null && quote.datebirth != null)
+            {
+                dateInfo = " ("+((int)(DateTime.Parse(quote.datecreated) - DateTime.Parse(quote.datebirth)).TotalDays / 365).ToString()+")";
+
+            }
+            return string.Format("'**{0}**'\r\n- {1}{2}"
+                , quote.quote
+                , quote.owner
+                , dateInfo);
+        }
+
         public static string BuildStats(string name, int msgCount, int talkedToMe, int commandCount, DateTime lastActivity, DateTime registerDate, int moronPerc)
         {
             return string.Format("<- - - **{0}'s** stats - - ->\r\n"

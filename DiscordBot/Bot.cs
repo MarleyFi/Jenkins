@@ -20,6 +20,7 @@ namespace DiscordBot
 
         public static Configuration Config; // Config (lol)
         public static DiscordClient Client; // Jenkins
+        public static readonly HttpClient HttpClient = new HttpClient();
 
         public static CommandService Command;
 
@@ -37,6 +38,7 @@ namespace DiscordBot
             Memes.Init(); // Why static?
             Spotify.Init();
             Cleverbot.Init();
+            
             Jenkins.Twitch.Init(); // Why not?
             //Jenkins.GamesSync.Init();
 
@@ -62,10 +64,9 @@ namespace DiscordBot
             #endregion Init
 
             #region Events
-
             Client.MessageReceived += async (s, e) =>
         {
-            if (e.Message.User.IsBot)
+            if (e.Message.User.IsBot /*&& !e.User.Id.Equals(324184384099975169)*/)
             {
                 return;
             }
@@ -85,9 +86,9 @@ namespace DiscordBot
             {
                 await e.Message.Channel.SendIsTyping();
                 string answer = Cleverbot.IsServiceAvailable ? Cleverbot.TalkWithCleverBot(Supporter.RemoveMention(e.Message.Text)) : Cleverbot.Talk(Supporter.RemoveMention(e.Message.Text));
-                await e.Channel.SendMessage(answer);
+                await e.Channel.SendMessage(answer+","+e.User.Mention);
                 Jenkins.Users.CountUpTalkedToMe(e.Message.User);
-                if (Config.Debug && !Jenkins.Users.IsUserDev(e.Message.User.Id))
+                if (Config.Debug && !Jenkins.Users.IsUserDev(e.Message.User.Id) && false)
                 {
                     NotifyDevs(string.Format("Answered in {0} to **{1}**\r\n**Message:** '*{2}*'\r\n**Answer:**  '*{3}*'",
                         e.Channel.IsPrivate ? "**private Chat**" : "#**" + e.Channel.Name + "** on Server **" + e.Server.Name + "**",
@@ -174,6 +175,7 @@ namespace DiscordBot
             Client.Ready += (s, e) =>
             {
                 Jenkins.GamesSync.Init();
+                GameManager.Init();
             };
 
             #endregion Events
@@ -295,6 +297,7 @@ namespace DiscordBot
                 .Description("For really important connection-Tests and stuff")
                 .Do(async (e) =>
                 {
+                    string mention = e.Channel.Mention;
                     await e.Channel.SendMessage("Pong! - Jenkins.NET");
                 });
 
@@ -317,7 +320,8 @@ namespace DiscordBot
                     await e.Message.Delete();
                     if (Jenkins.Users.IsUserDev(e.Message.User.Id))
                         Memes.Init();
-                    await e.Message.User.SendMessage(Supporter.BuildList("Memes", Memes.GetMemes()));
+
+                    await e.Channel.SendMessage(Supporter.BuildList("Memes", Memes.GetMemes()));
                 });
 
             Command.CreateCommand("meme")
@@ -462,7 +466,7 @@ namespace DiscordBot
 
             Command.CreateCommand("addInsult")
                 .Description("Add a insult to my Vacabulary Hint: '*' will be the Username")
-                .Parameter("text", ParameterType.Required)
+                .Parameter("text", ParameterType.Unparsed)
                 .Alias(new string[] { "ai", "addinsult" })
                 .Do(async (e) =>
                 {
@@ -499,7 +503,7 @@ namespace DiscordBot
 
             Command.CreateCommand("delInsult")
                 .Description("Delete one of your insults")
-                .Parameter("index", ParameterType.Required)
+                .Parameter("index", ParameterType.Unparsed)
                 .Alias(new string[] { "di", "delinsult" })
                 .Do(async (e) =>
                 {
@@ -509,7 +513,7 @@ namespace DiscordBot
 
             Command.CreateCommand("addVictim")
                 .Description("He should suffer too of you insist")
-                .Parameter("name", ParameterType.Required)
+                .Parameter("name", ParameterType.Unparsed)
                 .Alias(new string[] { "av", "addvictim" })
                 .Do(async (e) =>
                 {
@@ -594,29 +598,32 @@ namespace DiscordBot
 
             Command.CreateCommand("quote")
                 .Description("You'll get one quote of my huge collection :bookmark: ")
+                .Parameter("rating", ParameterType.Unparsed)
                 .Alias(new string[] { "q" })
                 .Do(async (e) =>
                 {
                     await e.Message.Delete();
                     if (Config.TTSEnabled)
                     {
-                        await e.Channel.SendTTSMessage(Jenkins.Quotes.GetRandomQuote());
+                        //await e.Channel.SendTTSMessage(Jenkins.Quotes.GetRandomQuote());
+                        await e.Channel.SendTTSMessage(Supporter.BuildQuote(Jenkins.Quotes.randomQuote(e.Args[0] != "" ? int.Parse(e.Args[0]) : 0)));
                     }
                     else
                     {
-                        await e.Channel.SendMessage(Jenkins.Quotes.GetRandomQuote());
+                        //await e.Channel.SendMessage(Jenkins.Quotes.GetRandomQuote());
+                        await e.Channel.SendMessage(Supporter.BuildQuote(Jenkins.Quotes.randomQuote(e.Args[0] != "" ? int.Parse(e.Args[0]): 0)));
                     }
                 });
 
             Command.CreateCommand("quoteOf")
                 .Description("I'll search for a quote of the owner you prefer")
                 .Alias(new string[] { "qo", "quoteof" })
-                .Parameter("name", ParameterType.Required)
+                .Parameter("name", ParameterType.Unparsed)
                 .Do(async (e) =>
                 {
                     await e.Message.Delete();
-                    string quote = Jenkins.Quotes.GetQuoteOf(e.Args[0].ToString());
-                    if (quote != string.Empty || quote != null)
+                    string quote = Supporter.BuildQuote(Jenkins.Quotes.quoteByOwner(e.Args[0].ToString()));//Jenkins.Quotes.GetQuoteOf(e.Args[0].ToString());
+                    if (quote != null)
                     {
                         if (Config.TTSEnabled)
                         {
@@ -665,18 +672,41 @@ namespace DiscordBot
                     }
                 });
 
+            //Command.CreateCommand("addQuote")
+            //    .Alias(new string[] { "aq", "addquote" })
+            //    .Description("Adds your super fancy quote to my vocabulary")
+            //    .Parameter("text", ParameterType.Unparsed)
+            //    .Do(async (e) =>
+            //    {
+            //        await e.Message.Delete();
+            //        string newQuote = e.GetArg(0);
+            //        string owner = e.GetArg(1);
+            //        Jenkins.Quotes.AddQuote(e.Message.User, newQuote, owner);
+            //        await e.User.SendMessage("A new quote has been added, Sir!");
+            //        await e.Channel.SendMessage(Jenkins.Quotes.GetQuote(newQuote));
+            //    });
+
             Command.CreateCommand("addQuote")
                 .Alias(new string[] { "aq", "addquote" })
                 .Description("Adds your super fancy quote to my vocabulary")
-                .Parameter("text", ParameterType.Required)
-                .Parameter("owner", ParameterType.Required)
+                .Parameter("vorname", ParameterType.Optional)
+                .Parameter("name", ParameterType.Optional)
+                .Parameter("rating", ParameterType.Optional)
+                .Parameter("name", ParameterType.Unparsed)
                 .Do(async (e) =>
                 {
                     await e.Message.Delete();
-                    string newQuote = e.GetArg(0);
-                    string owner = e.GetArg(1);
-                    Jenkins.Quotes.AddQuote(e.Message.User, newQuote, owner);
+                    string owner = e.GetArg(0) +" "+ e.GetArg(1);
+                    string rating = e.GetArg(2);
+                    string quote = e.GetArg(3);
+                    if(Jenkins.Quotes.findQuote(quote) != null)
+                    {
+                        await e.User.SendMessage("I got this quote already, Sir.");
+                        return;
+                    }
+                    Jenkins.Quotes.newQuote(quote, owner, rating);
                     await e.User.SendMessage("A new quote has been added, Sir!");
+                    await e.Channel.SendMessage(Supporter.BuildQuote(Jenkins.Quotes.findQuote(quote)));
                 });
 
             Command.CreateCommand("findQuote")
@@ -687,7 +717,7 @@ namespace DiscordBot
                 {
                     await e.Message.Delete();
                     string searchKey = e.GetArg(0);
-                    string quote = Jenkins.Quotes.GetQuote(searchKey);
+                    string quote = Supporter.BuildQuote(Jenkins.Quotes.findQuote(searchKey));//Jenkins.Quotes.GetQuote(searchKey);
 
                     if (quote != string.Empty || quote != null)
                     {
@@ -706,19 +736,19 @@ namespace DiscordBot
                     }
                 });
 
-            Command.CreateCommand("listQuotes")
-                .Description("Shows all quotes you've created")
-                .Alias(new string[] { "lq", "listquotes" })
-                .Do(async (e) =>
-                {
-                    await e.Message.Delete();
-                    string quotes = Jenkins.Quotes.ListQuotes(e.Message.User, e.Message.Server.Id);
+            //Command.CreateCommand("listQuotes")
+            //    .Description("Shows all quotes you've created")
+            //    .Alias(new string[] { "lq", "listquotes" })
+            //    .Do(async (e) =>
+            //    {
+            //        await e.Message.Delete();
+            //        string quotes = Jenkins.Quotes.ListQuotes(e.Message.User, e.Message.Server.Id);
 
-                    foreach (var message in Supporter.SplitMessage(quotes))
-                    {
-                        await e.Channel.SendMessage(message);
-                    }
-                });
+            //        foreach (var message in Supporter.SplitMessage(quotes))
+            //        {
+            //            await e.Channel.SendMessage(message);
+            //        }
+            //    });
 
             Command.CreateCommand("delQuote")
                 .Description("Removes one of ya quotes")
@@ -732,6 +762,19 @@ namespace DiscordBot
                     }
                     await e.Message.Delete();
                     Jenkins.Quotes.DelQuote(e.Message.User, int.Parse(e.Args[0].ToString()), e.Message.Server.Id);
+                });
+
+            Command.CreateCommand("syncQuotes")
+                .Description("Syncs the quote with the given API")
+                .Alias(new string[] { "sq", "syncquotes"})
+                .Do(async (e) =>
+                {
+                    if (!Jenkins.Users.IsUserDev(e.Message.User.Id))
+                    {
+                        return;
+                    }
+                    await e.Message.Delete();
+                    Jenkins.Quotes.SyncQuotes();
                 });
 
             #endregion Quotes
@@ -909,7 +952,7 @@ namespace DiscordBot
                     await e.Message.Delete();
                     Channel vChannel = e.User.VoiceChannel;
 
-                    if (vChannel != null)
+                    if (vChannel != null && !Audio.IsPlaying)
                     {
                         string path = Path.Combine(Environment.CurrentDirectory, "files", "mp3", "pardy.mp3");
                         Audio.StreamFileToVoiceChannel(path, vChannel);
@@ -940,7 +983,7 @@ namespace DiscordBot
                         vChannel = e.User.VoiceChannel;
                     }
 
-                    if (vChannel != null)
+                    if (vChannel != null && !Audio.IsPlaying)
                     {
                         string path = Path.Combine(Environment.CurrentDirectory, "files", "mp3", "pardy.mp3");
                         Audio.StreamFileToVoiceChannel(path, vChannel);
@@ -959,7 +1002,7 @@ namespace DiscordBot
                     await e.Message.Delete();
                     Channel vChannel = e.User.VoiceChannel;
 
-                    if (vChannel != null)
+                    if (vChannel != null && !Audio.IsPlaying)
                     {
                         string path = Path.Combine(Environment.CurrentDirectory, "files", "mp3", "slowClap.mp3");
                         Audio.StreamFileToVoiceChannel(path, vChannel);
@@ -974,7 +1017,7 @@ namespace DiscordBot
                     await e.Message.Delete();
                     Channel vChannel = e.User.VoiceChannel;
 
-                    if (vChannel != null)
+                    if (vChannel != null && !Audio.IsPlaying)
                     {
                         string path = Path.Combine(Environment.CurrentDirectory, "files", "mp3", "airhorn.mp3");
                         Audio.StreamFileToVoiceChannel(path, vChannel);
@@ -992,14 +1035,12 @@ namespace DiscordBot
                     await e.Message.Delete();
                     Channel vChannel = e.User.VoiceChannel;
 
-                    if (vChannel != null)
+                    if (vChannel != null && !Audio.IsPlaying)
                     {
                         string path = Path.Combine(Environment.CurrentDirectory, "files", "mp3", "lul.mp3");
                         Audio.StreamFileToVoiceChannel(path, vChannel);
                     }
                 }
-
-
         );
 
             Command.CreateCommand("maennerwiewir")
@@ -1010,62 +1051,76 @@ namespace DiscordBot
                     await e.Message.Delete();
                     Channel vChannel = e.User.VoiceChannel;
 
-                    if (vChannel != null)
+                    if (vChannel != null && !Audio.IsPlaying)
                     {
                         string path = Path.Combine(Environment.CurrentDirectory, "files", "mp3", "paddo.mp3");
                         Audio.StreamFileToVoiceChannel(path, vChannel);
                     }
                 }
-
-
         );
 
-            Command.CreateCommand("play")
-                .Description("Streams a YouTube Video to your vChannel :musical_note:")
-                .Parameter("url", ParameterType.Required)
-                .Do(async (e) =>
-                {
-                    if (!Jenkins.Users.IsUserDev(e.Message.User.Id))
-                        return;
+            Command.CreateCommand("sadViolin")
+               .Description("For some sad moments")
+               .Alias(new string[] { "sadviolin", "sv","violin", "sad" })
+               .Do(async (e) =>
+               {
+                   await e.Message.Delete();
+                   Channel vChannel = e.User.VoiceChannel;
 
-                    return; // Discord.js
+                   if (vChannel != null && !Audio.IsPlaying)
+                   {
+                       string path = Path.Combine(Environment.CurrentDirectory, "files", "mp3", "violin.mp3");
+                       Audio.StreamFileToVoiceChannel(path, vChannel);
+                   }
+               }
+       );
 
-                    await e.Message.Delete();
-                    Channel vChannel = e.User.VoiceChannel;
-                    if (vChannel != null)
-                    {
-                        var botMsg = await e.Message.Channel.SendMessage("Checking URL...");
-                        Channel vChannelToStream = vChannel;
-                        Audio.DownloadAndPlayURL(e.Args[0], botMsg, e.Message.User, vChannel);
-                    }
-                    else
-                    {
-                        await e.Message.User.SendMessage("You have to be in a Voicechannel for this");
-                    }
-                }
-                    );
+            //Command.CreateCommand("play")
+            //    .Description("Streams a YouTube Video to your vChannel :musical_note:")
+            //    .Parameter("url", ParameterType.Required)
+            //    .Do(async (e) =>
+            //    {
+            //        if (!Jenkins.Users.IsUserDev(e.Message.User.Id))
+            //            return;
 
-            Command.CreateCommand("random")
-                .Description("I'll stream some weird random shit to your vChannel, dude")
-                .Do((e) =>
-                {
-                    return; // Discord.js
-                }
-                    );
+            //        return; // Discord.js
 
-            Command.CreateCommand("stop")
-                .Description("Stops the playing audio")
-                .Do(async (e) =>
-                {
-                    if (!Jenkins.Users.IsUserDev(e.Message.User.Id))
-                        return;
+            //        await e.Message.Delete();
+            //        Channel vChannel = e.User.VoiceChannel;
+            //        if (vChannel != null)
+            //        {
+            //            var botMsg = await e.Message.Channel.SendMessage("Checking URL...");
+            //            Channel vChannelToStream = vChannel;
+            //            Audio.DownloadAndPlayURL(e.Args[0], botMsg, e.Message.User, vChannel);
+            //        }
+            //        else
+            //        {
+            //            await e.Message.User.SendMessage("You have to be in a Voicechannel for this");
+            //        }
+            //    }
+            //        );
 
-                    return; // Discord.js
+            //Command.CreateCommand("random")
+            //    .Description("I'll stream some weird random shit to your vChannel, dude")
+            //    .Do((e) =>
+            //    {
+            //        return; // Discord.js
+            //    }
+            //        );
 
-                    await e.Message.Delete();
-                    Audio.IsPlaying = false;
-                }
-                    );
+            //Command.CreateCommand("stop")
+            //    .Description("Stops the playing audio")
+            //    .Do(async (e) =>
+            //    {
+            //        if (!Jenkins.Users.IsUserDev(e.Message.User.Id))
+            //            return;
+
+            //        return; // Discord.js
+
+            //        await e.Message.Delete();
+            //        Audio.IsPlaying = false;
+            //    }
+            //        );
 
             #endregion VoiceCommands
 
@@ -1173,6 +1228,7 @@ namespace DiscordBot
 
             Command.CreateCommand("mute")
                 .Description("One word and I'll shut my dirty mouth!")
+                .Hide()
                 .Do(async (e) =>
                 {
                     if (!Jenkins.Users.IsUserAdmin(e.Message.User.Id, e.Message.Server.Id))
@@ -1185,6 +1241,7 @@ namespace DiscordBot
 
             Command.CreateCommand("unmute")
                 .Description("The show must go on")
+                .Hide()
                 .Do(async (e) =>
                 {
                     if (!Jenkins.Users.IsUserAdmin(e.Message.User.Id, e.Message.Server.Id))
@@ -1400,7 +1457,7 @@ namespace DiscordBot
                                 sb.AppendLine("-> /**getFood <KRZ>** - Eine spezifische möglichkeit ausgeben");
                                 sb.AppendLine("-> /**getFoodAll** - ALLE möglichkeiten ausgeben");
                                 sb.AppendLine("-> /**addFood <KRZ> <NAME> <DESC> <DAYS> <INFO>** - Fügt eine möglichkeit hinzu. Beispiel:\r\n"
-                                    + "*/addFood krz:'KFC' name:'Kentucky Fried Chicken' desc:'KFC in Gießen' days:'AllDays' info:'Tel: 01805 4646'*");
+                                    + "*/addFood krz:'KFC' name:'Kentucky Fried Chicken' desc:'KFC in Gießen' days:'AllDays' info:'Tel: 01805 4646' driverRequired:'true'*");
                                 sb.AppendLine("< - - - **Vote-Help** - - - >");
                                 sb.AppendLine();
                                 sb.AppendLine("-> /**vote <KRZ>** - Für etwas abstimmen bswp: /vote RL für *Real in Gießen*");
@@ -1502,6 +1559,7 @@ namespace DiscordBot
                             .Parameter("desc", ParameterType.Optional)
                             .Parameter("days", ParameterType.Optional)
                             .Parameter("info", ParameterType.Optional)
+                            .Parameter("driverRequired", ParameterType.Optional)
                             .Do(async (e) =>
                             {
                                 await e.Message.Delete();
@@ -1510,6 +1568,11 @@ namespace DiscordBot
                                 string desc = e.GetArg("desc");
                                 string days = e.GetArg("days");
                                 string info = e.GetArg("info");
+                                string driverRequiredString = e.GetArg("driverRequired");
+                                bool driverRequired;
+                                if (!bool.TryParse(driverRequiredString, out driverRequired)) {
+                                    driverRequired = true;
+                                } 
                                 string[] daysArray = days.Trim(' ').Split(',');
                                 List<Food.Day> dayList = new List<Food.Day>();
                                 foreach (var dayString in daysArray)
@@ -1521,7 +1584,8 @@ namespace DiscordBot
                                         dayList.Add(dayEnum);
                                     }
                                 }
-                                Food.AddFoodOption(krz, name, desc, dayList.AsEnumerable(), info);
+
+                                Food.AddFoodOption(krz, name, desc, dayList.AsEnumerable(), info, driverRequired);
 
                                 await e.Channel.SendMessage("**" + e.Args[0] + "** was added.");
                             });
@@ -1756,7 +1820,7 @@ namespace DiscordBot
                             .Alias(new string[] { "gh", "gameshelp" })
                             .Do(async (e) =>
                             {
-                                if (!Jenkins.Users.IsUserDev(e.User.Id))
+                                if (!Jenkins.Users.IsUserAdmin(e.User.Id, e.Server.Id))
                                 {
                                     return;
                                 }
@@ -1778,7 +1842,7 @@ namespace DiscordBot
                             .Parameter("name", ParameterType.Required)
                             .Do(async (e) =>
                             {
-                                if (!Jenkins.Users.IsUserDev(e.User.Id))
+                                if (!Jenkins.Users.IsUserAdmin(e.User.Id, e.Server.Id))
                                 {
                                     return;
                                 }
@@ -1802,7 +1866,7 @@ namespace DiscordBot
                             .Parameter("name", ParameterType.Required)
                             .Do(async (e) =>
                             {
-                                if (!Jenkins.Users.IsUserDev(e.User.Id))
+                                if (!Jenkins.Users.IsUserAdmin(e.User.Id, e.Server.Id))
                                 {
                                     return;
                                 }
@@ -1825,12 +1889,28 @@ namespace DiscordBot
                             .Alias(new string[] { "syncServers", "syncservers" })
                             .Do(async (e) =>
                             {
-                                if (!Jenkins.Users.IsUserDev(e.User.Id))
+                                if (!Jenkins.Users.IsUserAdmin(e.User.Id, e.Server.Id))
                                 {
                                     return;
                                 }
                                 await e.Message.Delete();
                                 await e.Channel.SendMessage(Supporter.BuildList("All syncing servers", Jenkins.GamesSync.GetAllSyncingServerNames()));
+                            });
+
+            Command.CreateCommand("Otto")
+                            .Description("Nominiere den Otto des Tages!")
+                            .Hide()
+                            .Alias(new string[] { "4head", "otto" })
+                            .Do(async (e) =>
+                            {
+                                if (e.Channel.IsPrivate)
+                                    return;
+
+                                if (!Jenkins.Users.IsUserAdmin(e.User.Id, e.Server.Id))
+                                {
+                                    return;
+                                }
+                                await e.Message.Delete();
                             });
 
             Command.CreateCommand("sync")
@@ -1875,31 +1955,7 @@ namespace DiscordBot
                     Jenkins.GamesSync.Init();
                 });
 
-            Command.CreateCommand("PaperRockScissor")
-            .Description("Challenge someone to a Paper-Rock-Scissor game")
-            .Parameter("users", ParameterType.Unparsed)
-            .Alias(new string[] { "battle", "game" })
-            .Do(async (e) =>
-            {
-                await e.Message.Delete();
-                if(e.Message.IsMentioningMe())
-                {
-                    // ToDo 
-                    return;
-                }
-                if(e.Message.MentionedUsers.Count() == 0 || e.Message.MentionedUsers.Count() >= 3 || e.Channel.IsPrivate)
-                {
-                    return;
-                }
-                if(e.Message.MentionedUsers.Count() == 1)
-                {
-                    PaperRockScissors game = new PaperRockScissors(e.Channel, e.User, e.Message.MentionedUsers.First(), true);
-                }
-                if (e.Message.MentionedUsers.Count() == 2)
-                {
-                    PaperRockScissors game = new PaperRockScissors(e.Channel, e.Message.MentionedUsers.ElementAt(0), e.Message.MentionedUsers.ElementAt(1), false);
-                }
-            });
+            
 
             #endregion Test
 
@@ -1984,7 +2040,7 @@ namespace DiscordBot
 
         private string BuildForecast(WeatherDAO weather)
         {
-            return string.Format("-- Weather forecast :white_sun_small_cloud:  for {0} --\r\n\r\nIt's **{1}** on **{2}C°** (feels like {3}C°) with a windspeed :dash: at **{4}m/s**"
+            return string.Format("-- Weather forecast :white_sun_small_cloud:  for {0} --\r\n\r\nIt's **{1}** on **{2}C°** (feels like {3}C°) with a windspeed :dash: at **{4}km/s**"
                 , DateTime.Now.ToShortDateString() + " " + DateTime.Now.ToShortTimeString()
                 , weather.summary
                 , Supporter.Celcius(weather.temperature).ToString("0.#")

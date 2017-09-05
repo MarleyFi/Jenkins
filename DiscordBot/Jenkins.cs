@@ -196,7 +196,7 @@ namespace DiscordBot
             return usersTable;
         }
 
-        private static DataTable CreateConfigTable()
+        private static DataTable CreateConfigTable() // remove
         {
             DataTable usersTable = new DataTable("CONFIGS");
             usersTable.Columns.Add("PROFILENAME", typeof(string));
@@ -315,8 +315,8 @@ namespace DiscordBot
             usersTable.Columns.Add("NAME", typeof(string));
             usersTable.Columns.Add("DESC", typeof(string));
             usersTable.Columns.Add("DAYS", typeof(string));
-            //usersTable.Columns.Add("DAYS", typeof(IEnumerable<Food.Day>));
             usersTable.Columns.Add("INFO", typeof(string));
+            usersTable.Columns.Add("DRIVERREQUIRED", typeof(bool));
             usersTable.PrimaryKey = new DataColumn[] { usersTable.Columns["KRZ"] };
             return usersTable;
         }
